@@ -68,6 +68,7 @@ El primero va por la mañana; el segundo, al terminar el día. Al cerrar la sema
 | GCP | Exportador `ta-gcs-to-s3` (Cloud Run Job) con su Cloud Scheduler cada 15 min (Lote 3.2) | **Pausado (por defecto): 0** de Cloud Run; el Scheduler pausado cuenta como job (0,10 USD/mes si pasa de los 3 gratuitos de la cuenta). **Encendido: ≈ 0,16 USD/día** (medido en v2.31: 96 ejecuciones de 36–118 s, mínimo 60 s cobrados) más centavos de S3 | Se pausa con `validate_3_2.py off` (2.7). Encenderlo de forma permanente lo decide el equipo |
 | AWS | Rol `ta-gcp-exporter-role` y objetos de `raw/origin=stream/` (Lote 3.2) | Rol gratis; objetos, centavos | **Nunca** |
 | GCP | Cloud Build (imagen `gcs-to-s3`, Lote 3.2) | Centavos por construcción | Termina solo |
+| AWS → local | Profiling de calidad (Lote 5.1): `profile_data.py sync` copia `raw/` del lake a `~/.cache/trendanalyzer/quality` (solo lectura) | Primera vez: ~13.300 GET y unos LIST (≈ 0,01 USD con las llamadas a KMS) y ~0,18 GB de salida de AWS (dentro de los 100 GB gratuitos al mes; sin comprobar en la factura). Después solo LIST. No deja nada encendido | No hace falta; `python project/scripts/validate_5_1.py clean` borra la caché local (~0,25 GB) |
 
 Con el presupuesto mensual de 400.000 COP, dejar el simulador una semana y Dataflow solo en jornadas de trabajo cabe sin problema. Las alertas del presupuesto (Lote 1.0) avisan por correo si algo se queda encendido.
 
