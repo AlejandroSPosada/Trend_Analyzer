@@ -94,9 +94,9 @@ fuente) corren en cada PR (HU-001, §3.30).
 <!-- kpis:inicio · generado por `python project/scripts/kpi_report.py --write`; no editar a mano -->
 | KPI | Objetivo | Medido | Cumple | Evidencia | Cómo volver a medirlo |
 |---|---|---|---|---|---|
-| Latencia de ingesta: Pub/Sub → BigQuery `posts_enriched` | < 60 s (§5.12) | 19,1 s | ✅ | `project/evidencia/` smoke_e2e_5_4.json (HU-048) | `python project/scripts/smoke_e2e.py run` |
+| Latencia de ingesta: Pub/Sub → BigQuery `posts_enriched` | < 60 s (§5.12) | 15,9 s | ✅ | `project/evidencia/` smoke_e2e_5_4.json (HU-048) | `python project/scripts/smoke_e2e.py run` |
 | Latencia de detección de tendencias: fin de la ventana → notificación | < 5 min (300 s) | 159,8 s (6.2) y 106,9 s (6.3) | ✅ | `project/evidencia/` validacion_6_2.json, validacion_6_3.json (F7) | `python project/scripts/validate_6_3.py flow` |
-| Punta a punta: Pub/Sub → `ta_curated.fact_posts` con el exportador y el workflow forzados | cada etapa en su objetivo (§5.12) | 465,2 s; bigquery 19,1 s, gcs_enriched 175,1 s, s3_raw 78,6 s, trusted 149,1 s, curated 62,4 s | ✅ | `project/evidencia/` smoke_e2e_5_4.json (HU-048) | `python project/scripts/smoke_e2e.py run` |
+| Punta a punta: Pub/Sub → `ta_curated.fact_posts` con el exportador y el workflow forzados | cada etapa en su objetivo (§5.12) | 430,1 s; bigquery 15,9 s, gcs_enriched 136,3 s, s3_raw 58,5 s, trusted 154,8 s, curated 80,6 s | ✅ | `project/evidencia/` smoke_e2e_5_4.json (HU-048) | `python project/scripts/smoke_e2e.py run` |
 | Completitud (capa confiable) | ≥ 95 % | 100 % (peor de 2) | ✅ | `project/evidencia/` validacion_5_2.json (Great Expectations) | `python project/scripts/run_dq.py run` (venv `~/.venvs/ta-gx`) |
 | Unicidad (capa confiable) | ≥ 99 % | 100 % (peor de 2) | ✅ | `project/evidencia/` validacion_5_2.json (Great Expectations) | `python project/scripts/run_dq.py run` (venv `~/.venvs/ta-gx`) |
 | Duplicados (capa confiable) | < 1 % | 0 % (peor de 2) | ✅ | `project/evidencia/` validacion_5_2.json (Great Expectations) | `python project/scripts/run_dq.py run` (venv `~/.venvs/ta-gx`) |

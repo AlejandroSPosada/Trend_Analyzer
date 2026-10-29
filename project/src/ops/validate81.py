@@ -16,6 +16,7 @@ import json
 import re
 import sys
 import time
+import traceback
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -65,11 +66,11 @@ LOT_FILES = ["docs/INFORME.md", "docs/RUNBOOK.md", "docs/SUSTENTACION.md", "proj
              "project/src/report/kpis.py", "project/src/report/tests/test_kpis.py", "project/scripts/kpi_report.py",
              "project/src/ops/validate81.py", "project/src/ops/tests/test_ops_validate81.py", "project/scripts/validate_8_1.py"]
 B1_EXPECTED = 5
-B2_EXPECTED = 5
+B2_EXPECTED = 7
 
 
 @dataclass
-class Ctx(v62.Ctx):
+class Ctx(v63.Ctx):  # el ensayo corre el flujo del 6.3, que usa ctx.demo (v2.61: antes heredaba del 6.2 y fallaba en la nube)
     evidence_path: Path = EVIDENCE
 
     def load_evidence(self) -> dict[str, Any]:
@@ -176,6 +177,12 @@ def part_ensayo(ctx: Ctx) -> int:
         steps["smoke"] = res.code
         res = ctx.run([sys.executable, "scripts/quicksight.py", "refresh"], cwd=PROJECT, timeout=1800)
         steps["refresh"] = res.code
+    except Exception as exc:  # se registra y se apaga igual: sin esto, una excepción se llevaba el registro del ensayo
+        steps["error"] = 1
+        error = f"{type(exc).__name__}: {exc}"
+        ctx.printer(traceback.format_exc())
+    else:
+        error = ""
     finally:
         steps["off"] = v62.part_off(ctx)
     f7, f11 = ctx.step_data("F", "F7"), ctx.step_data("F", "F11")
@@ -185,7 +192,8 @@ def part_ensayo(ctx: Ctx) -> int:
             f"{'todo OK' if good else 'con fallas'} · ola ×{f11.get('rate_ratio')} → alerta notificada a los "
             f"{f7.get('notification_s')} s del fin de la ventana · prueba de humo "
             f"{'OK' if steps.get('smoke') == 0 else 'FALLA'} · SPICE {'refrescado' if steps.get('refresh') == 0 else 'sin refrescar'} · "
-            f"apagado {'OK' if steps.get('off') == 0 else 'revisar status.py'}. Evidencia: `project/evidencia/validacion_8_1.json` "
+            f"apagado {'OK' if steps.get('off') == 0 else 'revisar status.py'}{f' · error: {error}' if error else ''}. "
+            "Evidencia: `project/evidencia/validacion_8_1.json` "
             "y `project/evidencia/smoke_e2e_5_4.json`.")
     path = DOCS / "SUSTENTACION.md"
     text = path.read_text(encoding="utf-8")

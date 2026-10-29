@@ -1,10 +1,22 @@
 # TrendAnalyzer · CHANGELOG
 
 > Historial de versiones del proyecto: una entrada por versión, la más reciente primero. Cada entrada indica el lote que motiva los cambios.
-> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.60**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
+> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.61**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
 > Plan, trazabilidad HU y estado por lote: [`PLAN.md`](PLAN.md).
 
 ---
+
+## v2.61 · desde v2.60
+
+**Lote que lo motiva:** Lote 8.1 (HU-044, HU-045) · cierre
+
+| Área | Cambio |
+|---|---|
+| Validación en la nube | Con el OK del usuario, **ensayo completo OK** (20:08 UTC, 95 min): ola ×2,8 con su alerta notificada a los 87 s del fin de la ventana (F OK, 13), prueba de humo OK (punta a punta 430 s), SPICE refrescado y apagado OK (≈ 0,53 USD). |
+| Informe | `kpi_report.py --write` con la prueba de humo nueva: ingesta 15,9 s (antes 19,1), punta a punta 430 s (antes 465); 8 KPI cumplen y 1 es informativo. `SUSTENTACION.md` con el registro del ensayo; `RUNBOOK.md` con qué hacer si no se guarda el estado de Terraform. |
+| Corregido | `validate81.Ctx` hereda del 6.3 (el flujo de la ola usa `ctx.demo`; los dos primeros intentos fallaron con `AttributeError`), con una prueba que exige todo lo que usan el 6.2 y el 6.3; una excepción queda en E1 y se apaga igual. |
+| Estado | 8.1 ✅, HU-044 ✅, HU-045 ✅; la fase 8 queda cerrada y con ella todos los lotes del plan. Decisiones del usuario: revocar el token de Mastodon del historial, activar el CD, las etiquetas de costos en AWS, un correo en `alarm_emails` y dar de baja QuickSight al terminar. |
+| Documento | ARCHITECTURE §3.33 («Cierre»); `validation-8-1.md` («Cierre», problemas); `INFORME.md`, `SUSTENTACION.md`, `RUNBOOK.md`; PLAN.md §3; HU.md (HU-044 y HU-045 ✅); evidencia `project/evidencia/validacion_8_1.json` y `smoke_e2e_5_4.*`; cabeceras a 2.61. |
 
 ## v2.60 · desde v2.59
 

@@ -1,8 +1,8 @@
 {
-  "run_id": "smoke-20261027T162356Z",
+  "run_id": "smoke-20261029T212744Z",
   "source": "reddit",
-  "seq": 1793118236,
-  "started_at": "2026-10-27T16:23:56.564Z",
+  "seq": 1793309264,
+  "started_at": "2026-10-29T21:27:44.672Z",
   "objectives_s": {
     "bigquery": 60,
     "gcs_enriched": 900,
@@ -15,24 +15,24 @@
     "ta-stream-dev"
   ],
   "warmup": {
-    "event_id": "fc0bf4e6-ff33-5a5d-bb07-2defa864126a",
+    "event_id": "46d49c61-5312-586d-8455-03060f41b3a5",
     "generator": "ta-verify@2.1",
     "ok": true,
-    "latency_s": 229.1
+    "latency_s": 14.0
   },
-  "event_id": "4e2712e1-0004-56bc-8606-209103050e96",
+  "event_id": "2cfd26d6-093d-57e7-973e-6eb806f804ba",
   "generator": "comment-gen@1.0",
-  "event_time": "2026-10-27T16:27:45.812Z",
-  "published_at": "2026-10-27T16:27:49.268Z",
+  "event_time": "2026-10-29T21:27:57.783Z",
+  "published_at": "2026-10-29T21:28:02.243Z",
   "stages": [
     {
       "stage": "bigquery",
       "from": "published",
       "objective_s": 60,
-      "available_at": "2026-10-27T16:28:08.324Z",
-      "detected_at": "2026-10-27T16:28:08.324Z",
-      "latency_s": 19.1,
-      "since_publish_s": 19.1,
+      "available_at": "2026-10-29T21:28:18.140Z",
+      "detected_at": "2026-10-29T21:28:18.140Z",
+      "latency_s": 15.9,
+      "since_publish_s": 15.9,
       "ok": true,
       "detail": "1 fila(s) en posts_enriched",
       "rows": 1
@@ -41,31 +41,31 @@
       "stage": "gcs_enriched",
       "from": "published",
       "objective_s": 900,
-      "available_at": "2026-10-27T16:30:44.393Z",
-      "detected_at": "2026-10-27T16:30:57.507Z",
-      "latency_s": 175.1,
-      "since_publish_s": 175.1,
+      "available_at": "2026-10-29T21:30:18.548Z",
+      "detected_at": "2026-10-29T21:30:22.067Z",
+      "latency_s": 136.3,
+      "since_publish_s": 136.3,
       "ok": true,
-      "detail": "enriched/source=reddit/dt=2026-10-27/hr=16/part-20261027T162500Z-p000.parquet",
-      "object": "enriched/source=reddit/dt=2026-10-27/hr=16/part-20261027T162500Z-p000.parquet",
-      "bytes": 9687
+      "detail": "enriched/source=reddit/dt=2026-10-29/hr=21/part-20261029T212500Z-p000.parquet",
+      "object": "enriched/source=reddit/dt=2026-10-29/hr=21/part-20261029T212500Z-p000.parquet",
+      "bytes": 46890
     },
     {
       "stage": "s3_raw",
       "from": "gcs_enriched",
       "objective_s": 300,
-      "available_at": "2026-10-27T16:32:03.000Z",
-      "detected_at": "2026-10-27T16:32:23.781Z",
-      "latency_s": 78.6,
-      "since_publish_s": 253.7,
+      "available_at": "2026-10-29T21:31:17.000Z",
+      "detected_at": "2026-10-29T21:31:30.743Z",
+      "latency_s": 58.5,
+      "since_publish_s": 194.8,
       "ok": true,
-      "detail": "raw/origin=stream/source=reddit/dt=2026-10-27/hr=16/part-20261027T162500Z-p000.parquet (mismos bytes que enriched/)",
-      "object": "raw/origin=stream/source=reddit/dt=2026-10-27/hr=16/part-20261027T162500Z-p000.parquet",
+      "detail": "raw/origin=stream/source=reddit/dt=2026-10-29/hr=21/part-20261029T212500Z-p000.parquet (mismos bytes que enriched/)",
+      "object": "raw/origin=stream/source=reddit/dt=2026-10-29/hr=21/part-20261029T212500Z-p000.parquet",
       "same_bytes_as_gcs": true,
       "exporter_runs": [
         {
           "ok": true,
-          "seconds": 85.7,
+          "seconds": 68.1,
           "detail": ""
         }
       ]
@@ -74,25 +74,25 @@
       "stage": "trusted",
       "from": "s3_raw",
       "objective_s": 900,
-      "available_at": "2026-10-27T16:34:32.081Z",
-      "detected_at": "2026-10-27T16:35:50.065Z",
-      "latency_s": 149.1,
-      "since_publish_s": 402.8,
+      "available_at": "2026-10-29T21:33:51.777Z",
+      "detected_at": "2026-10-29T21:35:16.335Z",
+      "latency_s": 154.8,
+      "since_publish_s": 349.5,
       "ok": true,
       "detail": "ta-job-raw-to-trusted SUCCEEDED; Athena ve la fila",
-      "workflow_run": "wr_126df504ac11674b91c7551edc1b614539ef1e4599ddac010a44998e6657e1e5"
+      "workflow_run": "wr_7542fad85fae5fc4d4768a7dbef7fd5307f0119977cbe7df8f67eb078f656ca2"
     },
     {
       "stage": "curated",
       "from": "trusted",
       "objective_s": 600,
-      "available_at": "2026-10-27T16:35:34.485Z",
-      "detected_at": "2026-10-27T16:35:52.644Z",
-      "latency_s": 62.4,
-      "since_publish_s": 465.2,
+      "available_at": "2026-10-29T21:35:12.343Z",
+      "detected_at": "2026-10-29T21:35:18.906Z",
+      "latency_s": 80.6,
+      "since_publish_s": 430.1,
       "ok": true,
       "detail": "ta-job-trusted-to-curated SUCCEEDED; Athena ve la fila",
-      "workflow_run": "wr_126df504ac11674b91c7551edc1b614539ef1e4599ddac010a44998e6657e1e5"
+      "workflow_run": "wr_7542fad85fae5fc4d4768a7dbef7fd5307f0119977cbe7df8f67eb078f656ca2"
     }
   ],
   "identity": {
@@ -107,8 +107,8 @@
     "same_user_hash": true,
     "stages_with_user_hash": 5
   },
-  "total_s": 465.2,
-  "finished_at": "2026-10-27T16:35:52.644Z",
+  "total_s": 430.1,
+  "finished_at": "2026-10-29T21:35:18.906Z",
   "ok": true,
   "exit_code": 0
 }

@@ -25,6 +25,8 @@ perfil `default` de AWS (cuenta `648617469176`, `us-east-1`). Antes de cualquier
 
 Las alertas de gasto (§3.31) mandan un correo si Dataflow lleva más de 4 h o el simulador más de 8 h encendidos.
 
+Si la red corta la escritura del estado de Terraform al encender o apagar el simulador (`Failed to save state`), `on.py` y `off.py` lo suben con `state push` y lo dicen. Si también falla, desde `project/`: `terraform -chdir=infra/gcp/environments/dev state push errored.tfstate`, y mover `errored.tfstate` fuera del repo; no planear ni aplicar antes.
+
 ## 2. Reiniciar el simulador
 
 | Situación | Qué hacer |

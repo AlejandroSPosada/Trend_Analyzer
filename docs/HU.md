@@ -104,8 +104,8 @@ Criterios de aceptación: lista verificable.
 | HU-042 | Observabilidad | 7 · 7.2 | M | Must | Final | ✅ |
 | HU-043 | Control de costos | 7 · 7.3 | M | Should | Final | ✅ |
 | **E9 · Entrega final** | | | | | | |
-| HU-044 | Informe técnico y KPIs medidos | 8 · 8.1 | Todos | Must | Final | ⬜ |
-| HU-045 | Sustentación y runbook | 8 · 8.1 | Todos | Must | Final | ⬜ |
+| HU-044 | Informe técnico y KPIs medidos | 8 · 8.1 | Todos | Must | Final | ✅ |
+| HU-045 | Sustentación y runbook | 8 · 8.1 | Todos | Must | Final | ✅ |
 
 ---
 

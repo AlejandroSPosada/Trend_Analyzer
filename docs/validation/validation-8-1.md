@@ -52,7 +52,7 @@ python project/scripts/validate_8_1.py status
 |---|---|
 | A1 | Los 10 archivos del lote |
 | B1 | `src/report/tests/test_kpis.py`: **5** passed (la evidencia real cumple todos los KPI; la tabla del informe está al día; una medición fuera de objetivo se marca ❌) |
-| B2 | `test_ops_validate81.py`: **5** passed |
+| B2 | `test_ops_validate81.py`: **7** passed |
 | L1 | `INFORME.md` con los 18 puntos de HU-044 |
 | L2 | `kpi_report.py --check`: la tabla del informe = la evidencia; 8 KPI cumplen y 1 es informativo (precisión del NLP) |
 | L3 | `SUSTENTACION.md`: las 7 etapas, `demo_scenario.py start`, la alerta, el plan B (capturas, ejecución grabada, simulador local) y el registro del ensayo |
@@ -61,6 +61,20 @@ python project/scripts/validate_8_1.py status
 | L6 | El ensayo está registrado (AVISO mientras no se haga) |
 | E1 | Ensayo: P y F del 6.3 (simulador y Dataflow, baseline, ola ×3 y su alerta), `smoke_e2e.py run`, `quicksight.py refresh` y O; el resultado queda en «Registro del ensayo» |
 
+## Cierre
+
+**Lote 8.1 cerrado (v2.61).** 29-oct-2026, WSL (`ta-streaming`), con el OK del usuario.
+
+| Parte | Resultado |
+|---|---|
+| A · Preflight | OK (1) |
+| B · Pruebas | OK (2): 5 y 7 |
+| L · Local | OK (6): el informe con su tabla de KPI al día, el guion, el runbook, las rutas citadas y el ensayo registrado |
+| E · Ensayo | OK a las 20:08 UTC (95 min): P OK; F OK (13), ola ×2,8 y notificación a los 87 s del fin de la ventana; prueba de humo OK (430 s); SPICE refrescado; O OK |
+
+Los dos primeros intentos se cortaron al empezar la ola (`validate81.Ctx` no tenía `demo`, del 6.3): corregido, con
+una prueba. La tabla de KPI se regeneró con la prueba de humo nueva (`kpi_report.py --write`).
+
 ## Problemas frecuentes
 
 | Síntoma | Qué hacer |
@@ -68,3 +82,4 @@ python project/scripts/validate_8_1.py status
 | L2 «la tabla del informe no coincide» | Una validación cambió su evidencia: `python project/scripts/kpi_report.py --write` y commit |
 | L2 «no cumplen: …» | Una medición nueva quedó fuera del objetivo: el informe debe decirlo; revisar la etapa con su validador |
 | E1 falla en la alerta | El baseline tarda ≈ 66 min con un job nuevo; `validate_6_3.py flow` tiene su propia guía (problemas frecuentes del 6.3) |
+| E1 con «error: …» | Una excepción cortó el ensayo: la traza está en la salida; el apagado corrió igual (O). Corregir y repetir `ensayo` |

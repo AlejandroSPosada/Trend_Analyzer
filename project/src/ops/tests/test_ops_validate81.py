@@ -55,3 +55,33 @@ def test_ensayo_needs_confirmation(tmp_path, monkeypatch):
                   evidence_path=tmp_path / "ev.json")
     step = json.loads((tmp_path / "ev.json").read_text(encoding="utf-8"))["parts"]["E"]["steps"][0]
     assert code == 0 and step["status"] == "AVISO"
+
+
+def test_ensayo_records_an_exception_and_still_turns_off(tmp_path, monkeypatch):
+    def boom(ctx):
+        raise RuntimeError("se cortó la red")
+
+    off: list = []
+    monkeypatch.setattr(v, "on_windows", lambda: False)
+    monkeypatch.setattr(v.v62, "part_prepare", boom)
+    monkeypatch.setattr(v.v62, "part_off", lambda ctx: off.append(1) or 0)
+    monkeypatch.setattr(v, "DOCS", tmp_path)
+    (tmp_path / "SUSTENTACION.md").write_text(f"x\n{v.ENSAYO_START}\nPendiente\n{v.ENSAYO_END}\n", encoding="utf-8")
+    code = v.main(["ensayo"], runner=FakeRunner(), printer=lambda s: None, confirm=lambda q: True, now=lambda: NOW,
+                  evidence_path=tmp_path / "ev.json")
+    step = json.loads((tmp_path / "ev.json").read_text(encoding="utf-8"))["parts"]["E"]["steps"][-1]
+    assert code == 1 and off == [1] and step["status"] == "FALLA" and "RuntimeError: se cortó la red" in step["detail"]
+    assert "con fallas" in (tmp_path / "SUSTENTACION.md").read_text(encoding="utf-8")
+
+
+def test_the_ensayo_ctx_has_everything_the_63_and_62_parts_use(tmp_path):
+    import re
+
+    ctx = v.Ctx(runner=FakeRunner(), options=v.build_parser().parse_args(["ensayo"]), printer=lambda s: None,
+                confirm=None, sleep=lambda s: None, now=lambda: NOW, evidence_path=tmp_path / "ev.json")
+    used = set()
+    for mod in (v.v63, v.v62):
+        used |= set(re.findall(r"\bctx\.(\w+)", open(mod.__file__, encoding="utf-8").read()))
+    assert used and [name for name in sorted(used) if not hasattr(ctx, name)] == []
+    used = set(re.findall(r"\bo\.(\w+)", open(v.v63.__file__, encoding="utf-8").read()))
+    assert [name for name in sorted(used) if not hasattr(ctx.options, name)] == []

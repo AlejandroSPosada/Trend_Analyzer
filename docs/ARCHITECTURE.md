@@ -1,6 +1,6 @@
 # TrendAnalyzer · ARCHITECTURE
 
-> Documento maestro de arquitectura y contratos. **Versión vigente: 2.60.**
+> Documento maestro de arquitectura y contratos. **Versión vigente: 2.61.**
 > Historial de versiones: [`CHANGELOG.md`](CHANGELOG.md) · Plan por fases, trazabilidad HU y estado: [`PLAN.md`](PLAN.md) · Historias de usuario: `HU.md` · Visión general: `README.md`.
 > Fuentes de verdad combinadas: `README.md` + `diagramaFINAL.drawio` + decisiones de este documento.
 
@@ -2793,7 +2793,7 @@ Escenario = `name`, `brand` (canónica), `sentiment`, `multiplier`, `duration_s`
 
 ### 3.33 Informe, sustentación y runbook (Lote 8.1)
 
-> Entregado en **v2.58** (HU-044, HU-045). Validación paso a paso en `docs/validation/validation-8-1.md` y automática con `project/scripts/validate_8_1.py`. **ADR-37.**
+> Entregado en **v2.58** y **cerrado en v2.61** ✅ (HU-044, HU-045): el ensayo completo en la nube salió bien. Validación paso a paso en `docs/validation/validation-8-1.md` y automática con `project/scripts/validate_8_1.py`. **ADR-37.**
 
 **Qué entrega.**
 
@@ -2815,9 +2815,11 @@ Escenario = `name`, `brand` (canónica), `sentiment`, `multiplier`, `duration_s`
 
 Si una validación nueva cambia su evidencia, `kpi_report.py --write` actualiza el informe y las pruebas lo exigen (`test_the_informe_table_is_in_sync`).
 
-**Pruebas** (sin red): `src/report/tests` **5**, `test_ops_validate81.py` **5**.
+**Pruebas** (sin red): `src/report/tests` **5**, `test_ops_validate81.py` **7**.
 
 > **Estado de la verificación (v2.58, al entregar):** WSL, `ta-streaming` (Python 3.11.17). **A OK** (1), **B OK** (5, 5), **L** 5 OK y 1 AVISO: L1 el informe con los 18 puntos de HU-044; L2 la tabla = la evidencia (9 KPI: 8 cumplen, 1 informativo); L3 el guion con las 7 etapas, el pico, la alerta, el plan B y el registro; L4 el runbook con sus 5 secciones; L5 las 39 rutas citadas existen; **L6 AVISO: el ensayo completo en la nube espera el OK del usuario**. La suite completa en un contenedor como la CI (uid 1001): **1.667 passed**, 4 omitidas, y 18 de contratos.
+
+> **Cierre (v2.61).** Ensayo completo en la nube el 29-oct-2026 a las 20:08 UTC (95 min), con el OK del usuario: **todo OK**. **P OK:** seek de `ta-raw-*-df`, simulador y un job `ta-stream-dev` nuevo. **F OK (13):** línea base de 60 ventanas lista en 59 min; `demo_scenario.py start` (postobon/negative ×3 en instagram, 300 s) subió la cadencia de 29,5 a 82,6 eventos/min (×2,8; 276 marcados, el 67 % esperado); `trend_windows` marcó 6 ventanas de volumen (z máx. 8,0) y 6 de sentimiento; Dataflow mandó `sentiment_down` y `volume_up` (cooldown respetado) y la notificación llegó a los **87 s** del fin de la ventana (Dataflow 42 s, `ta-alerts` 44 s, notificador 54 s); el escenario terminó solo. **Prueba de humo OK:** punta a punta 430 s (BigQuery 15,9 s, GCS 136 s, S3 58,5 s, Trusted 155 s, Curated 81 s). **SPICE refrescado. O OK** (1,5 h ≈ 0,53 USD). `kpi_report.py --write` puso la evidencia nueva en el informe (ingesta 15,9 s, antes 19,1; punta a punta 430 s, antes 465): 8 KPI cumplen y 1 es informativo. **Corregido en la validación:** los dos primeros intentos se cortaron al empezar la ola porque `validate81.Ctx` heredaba del 6.2 y el flujo del 6.3 llama a `ctx.demo` (`AttributeError`, solo en la nube): ahora hereda del 6.3 y una prueba exige que exista todo `ctx.…` y `o.…` que usan el 6.2 y el 6.3; una excepción se llevaba el registro del ensayo: ahora queda en E1 y se apaga igual; el apagado del primer intento chocó con un corte de red al guardar el estado de Terraform y se recuperó con `state push` (desde v2.59 `on.py` y `off.py` lo hacen solos).
 
 #### 3.33.1 Interfaces del lote
 

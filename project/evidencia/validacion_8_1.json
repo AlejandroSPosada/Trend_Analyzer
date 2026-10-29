@@ -23,8 +23,8 @@
     "B": {
       "title": "Pruebas",
       "status": "OK",
-      "started_at": "2026-10-29T05:41:09.763862+00:00",
-      "finished_at": "2026-10-29T05:41:11.349708+00:00",
+      "started_at": "2026-10-29T21:46:09.622571+00:00",
+      "finished_at": "2026-10-29T21:46:12.162546+00:00",
       "steps": [
         {
           "id": "B1",
@@ -43,9 +43,9 @@
           "id": "B2",
           "title": "src/ops/tests/test_ops_validate81.py",
           "status": "OK",
-          "detail": "5 passed (esperado 5)",
+          "detail": "7 passed (esperado 7)",
           "data": {
-            "passed": 5,
+            "passed": 7,
             "failed": 0,
             "skipped": 0,
             "error": 0,
@@ -56,9 +56,9 @@
     },
     "L": {
       "title": "Informe, guion y runbook (sin nube)",
-      "status": "AVISO",
-      "started_at": "2026-10-29T05:41:11.689104+00:00",
-      "finished_at": "2026-10-29T05:41:11.741163+00:00",
+      "status": "OK",
+      "started_at": "2026-10-29T21:46:12.550026+00:00",
+      "finished_at": "2026-10-29T21:46:12.609210+00:00",
       "steps": [
         {
           "id": "L1",
@@ -76,7 +76,7 @@
             "kpis": [
               {
                 "kpi": "Latencia de ingesta: Pub/Sub → BigQuery `posts_enriched`",
-                "medido": "19,1 s",
+                "medido": "15,9 s",
                 "cumple": true
               },
               {
@@ -86,7 +86,7 @@
               },
               {
                 "kpi": "Punta a punta: Pub/Sub → `ta_curated.fact_posts` con el exportador y el workflow forzados",
-                "medido": "465,2 s; bigquery 19,1 s, gcs_enriched 175,1 s, s3_raw 78,6 s, trusted 149,1 s, curated 62,4 s",
+                "medido": "430,1 s; bigquery 15,9 s, gcs_enriched 136,3 s, s3_raw 58,5 s, trusted 154,8 s, curated 80,6 s",
                 "cumple": true
               },
               {
@@ -140,18 +140,331 @@
           "id": "L5",
           "title": "comandos y documentos citados existen",
           "status": "OK",
-          "detail": "39 rutas",
+          "detail": "41 rutas",
           "data": {}
         },
         {
           "id": "L6",
           "title": "ensayo completo registrado",
-          "status": "AVISO",
-          "detail": "pendiente (parte ensayo, con el OK del usuario)",
+          "status": "OK",
+          "detail": "registrado",
           "data": {}
+        }
+      ]
+    },
+    "P": {
+      "title": "Preparar: descartar el atraso, encender el simulador y Dataflow con la rama de alertas",
+      "status": "OK",
+      "started_at": "2026-10-29T20:08:26.857304+00:00",
+      "finished_at": "2026-10-29T20:12:31.023169+00:00",
+      "steps": [
+        {
+          "id": "P1",
+          "title": "seek de ta-raw-*-df a ahora",
+          "status": "OK",
+          "detail": "3 suscripciones movidas a 2026-10-29T20:08:28Z",
+          "data": {
+            "seek_time": "2026-10-29T20:08:28Z"
+          }
+        },
+        {
+          "id": "P2",
+          "title": "simulador y Dataflow en marcha",
+          "status": "OK",
+          "detail": "simulador https://ta-stream-simulator-kyu3kofmtq-uc.a.run.app · ta-stream-dev (2026-10-29_13_09_55-5115478437135152594)",
+          "data": {
+            "job": "2026-10-29_13_09_55-5115478437135152594",
+            "started_at": "2026-10-29T20:12:31.020378+00:00"
+          }
+        }
+      ]
+    },
+    "O": {
+      "title": "Apagado: Dataflow drenado y simulador apagado (el notificador queda, escala a cero)",
+      "status": "OK",
+      "started_at": "2026-10-29T21:38:56.763977+00:00",
+      "finished_at": "2026-10-29T21:43:51.909275+00:00",
+      "steps": [
+        {
+          "id": "O1",
+          "title": "Dataflow y simulador apagados",
+          "status": "OK",
+          "detail": "ningún job activo y simulador apagado · encendidos ≈ 1.52 h ≈ 0.53 USD",
+          "data": {
+            "hours": 1.52
+          }
+        },
+        {
+          "id": "O2",
+          "title": "suscripciones temporales ta-verify-*",
+          "status": "OK",
+          "detail": "ninguna",
+          "data": {}
+        }
+      ]
+    },
+    "E": {
+      "title": "Ensayo completo en la nube",
+      "status": "OK",
+      "started_at": "2026-10-29T20:08:26.857297+00:00",
+      "finished_at": "2026-10-29T21:43:51.925266+00:00",
+      "steps": [
+        {
+          "id": "E1",
+          "title": "ensayo completo",
+          "status": "OK",
+          "detail": "**Ensayo del 29-Oct-2026 (UTC 20:08, 95 min):** todo OK · ola ×2.8 → alerta notificada a los 87.3 s del fin de la ventana · prueba de humo OK · SPICE refrescado · apagado OK. Evidencia: `project/evidencia/validacion_8_1.json` y `project/evidencia/smoke_e2e_5_4.json`.",
+          "data": {
+            "steps": {
+              "prepare": 0,
+              "flow": 0,
+              "smoke": 0,
+              "refresh": 0,
+              "off": 0
+            },
+            "minutes": 95
+          }
+        }
+      ]
+    },
+    "F": {
+      "title": "Escenario real: POST /control/scenario → ola marcada → trend_windows → alerta → notificación",
+      "status": "OK",
+      "started_at": "2026-10-29T20:12:31.026866+00:00",
+      "finished_at": "2026-10-29T21:27:41.005328+00:00",
+      "steps": [
+        {
+          "id": "F0",
+          "title": "Dataflow y simulador",
+          "status": "OK",
+          "detail": "ta-stream-dev y https://ta-stream-simulator-kyu3kofmtq-uc.a.run.app desde 2026-10-29T20:12:31 UTC",
+          "data": {}
+        },
+        {
+          "id": "F1",
+          "title": "baseline completo (60 ventanas)",
+          "status": "OK",
+          "detail": "primera ventana de postobon/instagram: 2026-10-29T20:05:00.000Z · listo desde 21:11 UTC",
+          "data": {
+            "first_window": "2026-10-29T20:05:00.000Z"
+          }
+        },
+        {
+          "id": "F2",
+          "title": "suscripciones temporales a ta-raw, ta-alerts y ta-alerts-incidents",
+          "status": "OK",
+          "detail": "ta-verify-raw-1464a2ee, ta-verify-alerts-1464a2ee, ta-verify-incidents-1464a2ee",
+          "data": {}
+        },
+        {
+          "id": "F3",
+          "title": "POST /control/scenario (con ID token)",
+          "status": "OK",
+          "detail": "demo/postobon-negative/20261029T211325Z: postobon/negative ×3.0 en instagram de 21:13:25 a 21:18:25 UTC",
+          "data": {
+            "scenario": {
+              "name": "demo/postobon-negative/20261029T211325Z",
+              "brand": "postobon",
+              "sentiment": "negative",
+              "multiplier": 3.0,
+              "duration_s": 300,
+              "source": "instagram",
+              "share": 0.6667,
+              "started_at": "2026-10-29T21:13:25.859Z",
+              "ends_at": "2026-10-29T21:18:25.859Z"
+            }
+          }
+        },
+        {
+          "id": "F4",
+          "title": "trend_windows: ventanas con is_alert de postobon/instagram",
+          "status": "OK",
+          "detail": "volumen: 6 ventanas (z máx 8.0) · sentimiento: 6 · 13 ventanas desde la ola",
+          "data": {
+            "alert_windows": {
+              "volume": [
+                "2026-10-29T21:15:00.000Z",
+                "2026-10-29T21:16:00.000Z",
+                "2026-10-29T21:17:00.000Z",
+                "2026-10-29T21:18:00.000Z",
+                "2026-10-29T21:19:00.000Z",
+                "2026-10-29T21:20:00.000Z"
+              ],
+              "sentiment": [
+                "2026-10-29T21:15:00.000Z",
+                "2026-10-29T21:16:00.000Z",
+                "2026-10-29T21:17:00.000Z",
+                "2026-10-29T21:18:00.000Z",
+                "2026-10-29T21:19:00.000Z",
+                "2026-10-29T21:20:00.000Z"
+              ]
+            }
+          }
+        },
+        {
+          "id": "F5",
+          "title": "mensajes de Dataflow en ta-alerts",
+          "status": "OK",
+          "detail": "2 de la ola (sentiment_down, volume_up) y 1 de otras claves; 0 inválidos",
+          "data": {
+            "types": [
+              "sentiment_down",
+              "volume_up"
+            ],
+            "others": 1,
+            "invalid": 0
+          }
+        },
+        {
+          "id": "F6",
+          "title": "contenido: marca, fuente, ventana y magnitud",
+          "status": "OK",
+          "detail": "Sentimiento a la baja de postobon en instagram: sentimiento medio −0,54 frente a 0,01 (−0,55, z = −5,9; 130 posts) en la ventana 2026-10-29 21:10–21:15 UTC (16:10–16:15 en Bogotá).",
+          "data": {
+            "alert": {
+              "schema": "ta-alert",
+              "schema_version": "1.0",
+              "alert_id": "9b899fd1-98eb-543f-a1a6-7b60977fcdef",
+              "alert_type": "sentiment_down",
+              "metric": "sentiment",
+              "direction": "down",
+              "origin": "dataflow",
+              "brand": "postobon",
+              "source": "instagram",
+              "window_start": "2026-10-29T21:10:00.000Z",
+              "window_end": "2026-10-29T21:15:00.000Z",
+              "value": -0.538524,
+              "baseline_mean": 0.00844,
+              "baseline_std": 0.092908,
+              "zscore": -5.887172,
+              "change": -0.546964,
+              "change_pct": null,
+              "z_threshold": 3.0,
+              "baseline_windows": 60,
+              "n_posts": 130,
+              "avg_sentiment": -0.538524,
+              "n_negative": 93,
+              "n_positive": 15,
+              "detected_at": "2026-10-29T21:15:42.432Z",
+              "cooldown_seconds": 900
+            }
+          }
+        },
+        {
+          "id": "F7",
+          "title": "detección < 5 min (fin de la ventana → notificación)",
+          "status": "OK",
+          "detail": "fin de la ventana 21:15:00 → Dataflow 42.4 s → ta-alerts 44.2 s → notificador 53.7 s → notificación 87.3 s",
+          "data": {
+            "detected_s": 42.4,
+            "published_s": 44.2,
+            "notifier_s": 53.7,
+            "notification_s": 87.3,
+            "incident": "0.oeeewdehu8pc"
+          }
+        },
+        {
+          "id": "F8",
+          "title": "cooldown de 15 min por marca × fuente × tipo",
+          "status": "OK",
+          "detail": "6 ventanas con alerta de volumen → 1 mensaje(s) volume_up; mensajes por tipo {'sentiment_down': 1, 'volume_up': 1}; sin pares a menos de 15 min en los 3 mensajes vistos",
+          "data": {
+            "per_type": {
+              "sentiment_down": 1,
+              "volume_up": 1
+            },
+            "violations": []
+          }
+        },
+        {
+          "id": "F9",
+          "title": "otras alertas durante la observación (tráfico normal del simulador)",
+          "status": "OK",
+          "detail": "1 mensajes: sprite/instagram/volume_up · 1 notificaciones de la política",
+          "data": {
+            "others": [
+              "sprite/instagram/volume_up"
+            ],
+            "notifications": 1
+          }
+        },
+        {
+          "id": "F10",
+          "title": "el escenario terminó solo al cumplir duration_s",
+          "status": "OK",
+          "detail": "expired a las 21:18:25 UTC · eventos forzados {'instagram': 276}",
+          "data": {
+            "last": {
+              "name": "demo/postobon-negative/20261029T211325Z",
+              "brand": "postobon",
+              "sentiment": "negative",
+              "multiplier": 3.0,
+              "duration_s": 300,
+              "source": "instagram",
+              "share": 0.6667,
+              "started_at": "2026-10-29T21:13:25.859Z",
+              "ends_at": "2026-10-29T21:18:25.859Z",
+              "ended_at": "2026-10-29T21:18:25.859Z",
+              "reason": "expired",
+              "events": {
+                "instagram": 276
+              }
+            }
+          }
+        },
+        {
+          "id": "F11",
+          "title": "ola en ta-raw-instagram: cadencia ×m, marca en sim.scenario y el resto igual",
+          "status": "OK",
+          "detail": "688 eventos · 29.46/min antes → 82.6/min durante (×2.8) → 28.67/min después · marcados 276 (67%, esperado 67%), todos postobon/negative/comment-gen@1.0 · normal 29.46 → 27.4/min",
+          "data": {
+            "phases": {
+              "before": {
+                "minutes": 2.14,
+                "events": 63,
+                "per_min": 29.46,
+                "marked": 0,
+                "marked_share": 0.0,
+                "normal_per_min": 29.46,
+                "wrong_marked": []
+              },
+              "during": {
+                "minutes": 5.0,
+                "events": 413,
+                "per_min": 82.6,
+                "marked": 276,
+                "marked_share": 0.6683,
+                "normal_per_min": 27.4,
+                "wrong_marked": []
+              },
+              "after": {
+                "minutes": 3.0,
+                "events": 86,
+                "per_min": 28.67,
+                "marked": 0,
+                "marked_share": 0.0,
+                "normal_per_min": 28.67,
+                "wrong_marked": []
+              }
+            },
+            "rate_ratio": 2.8,
+            "expected_share": 0.6667
+          }
+        },
+        {
+          "id": "F12",
+          "title": "logs del simulador en Cloud Logging",
+          "status": "OK",
+          "detail": "scenario_start 1 · scenario_end 1",
+          "data": {
+            "logs": {
+              "scenario_start": 1,
+              "scenario_end": 1
+            }
+          }
         }
       ]
     }
   },
-  "updated_at": "2026-10-29T05:41:11.741282+00:00"
+  "updated_at": "2026-10-29T21:46:12.609330+00:00"
 }

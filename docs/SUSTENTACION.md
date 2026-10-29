@@ -68,5 +68,5 @@ Drena Dataflow, apaga el simulador y pausa el exportador. `status.py` debe decir
 ## Registro del ensayo
 
 <!-- ensayo:inicio · lo completa `python project/scripts/validate_8_1.py ensayo` -->
-Pendiente: el ensayo completo en la nube necesita el OK del dueño del proyecto (encender ~1,5 h, ≈ 0,6 USD).
+**Ensayo del 29-Oct-2026 (UTC 20:08, 95 min):** todo OK · ola ×2.8 → alerta notificada a los 87.3 s del fin de la ventana · prueba de humo OK · SPICE refrescado · apagado OK. Evidencia: `project/evidencia/validacion_8_1.json` y `project/evidencia/smoke_e2e_5_4.json`.
 <!-- ensayo:fin -->
