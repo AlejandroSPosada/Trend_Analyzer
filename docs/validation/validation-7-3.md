@@ -117,7 +117,7 @@ Monitoring y porque el incidente del simulador sigue abierto mientras está ence
 
 | Síntoma | Qué hacer |
 |---|---|
-| K4 sin `component` en Cost Explorer | Las etiquetas están en los recursos (K4), pero Cost Explorer solo agrupa por las que se activan en Billing → Cost allocation tags. La cuenta es compartida: lo decide el usuario |
+| K4 sin `component` en Cost Explorer | Las etiquetas están en los recursos (K4), pero Cost Explorer solo agrupa por las activadas en Billing → Cost allocation tags: `project` activa desde el 29-oct-2026; `component`, cuando AWS la muestre (hasta 24 h): `aws ce update-cost-allocation-tags-status --cost-allocation-tags-status TagKey=component,Status=Active` |
 | K1 «sin presupuesto» | La cuenta de `gcloud` necesita `billing.budgets.list` en la cuenta de facturación |
 | F2 o F3 no llegan | `fire` necesita el simulador con instancias y un job `ta-stream-*` corriendo; la métrica de Dataflow tarda unos minutos en aparecer |
 | F3 no llega y el simulador sigue encendido desde un `fire` anterior | El incidente anterior sigue abierto y no se avisa dos veces: apagar (`off.py`), encender y repetir |

@@ -1,6 +1,6 @@
 # TrendAnalyzer · ARCHITECTURE
 
-> Documento maestro de arquitectura y contratos. **Versión vigente: 2.61.**
+> Documento maestro de arquitectura y contratos. **Versión vigente: 2.62.**
 > Historial de versiones: [`CHANGELOG.md`](CHANGELOG.md) · Plan por fases, trazabilidad HU y estado: [`PLAN.md`](PLAN.md) · Historias de usuario: `HU.md` · Visión general: `README.md`.
 > Fuentes de verdad combinadas: `README.md` + `diagramaFINAL.drawio` + decisiones de este documento.
 
@@ -2734,6 +2734,7 @@ Escenario = `name`, `brand` (canónica), `sentiment`, `multiplier`, `duration_s`
 - La condición del simulador sigue el tiempo **seguido** con instancias: si se apaga y se enciende, empieza de cero.
 - *(v2.59)* Su incidente queda abierto mientras el simulador siga encendido y no se avisa dos veces: `fire` prueba el simulador una vez por encendido (con el simulador recién encendido, como en el cierre).
 - *(v2.59)* Si la red corta la escritura del estado (`Failed to save state`), el apply ya cambió la nube: `validate73.apply_saved` y `ops.services.push_errored_state` suben `errored.tfstate` con `state push` y lo sacan del repo; a mano, como en el 3.2.
+- *(v2.62)* Etiquetas de asignación de costos en AWS Billing (la cuenta no está en una organización, así que se activan desde ella): `project` activa desde el 29-oct-2026; `component` aparece en Billing hasta 24 h después de usarse por primera vez y se activa con `aws ce update-cost-allocation-tags-status --cost-allocation-tags-status TagKey=component,Status=Active`. Cost Explorer agrupa por ellas desde la activación, sin datos anteriores.
 - `terraform fmt` realinea los `=` al agregar `providers`: las pruebas que leen Terraform deben buscar con `\s*=\s*` (se corrigió `test_exp_infra.py`).
 
 **Para el siguiente lote (7.2, 8.1).** La observabilidad (7.2) usa `notification_channel_ids` y el proveedor `aws.observability`. El informe (8.1) toma de aquí el costo por componente y los controles de gasto.

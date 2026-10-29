@@ -1,10 +1,21 @@
 # TrendAnalyzer · CHANGELOG
 
 > Historial de versiones del proyecto: una entrada por versión, la más reciente primero. Cada entrada indica el lote que motiva los cambios.
-> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.61**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
+> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.62**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
 > Plan, trazabilidad HU y estado por lote: [`PLAN.md`](PLAN.md).
 
 ---
+
+## v2.62 · desde v2.61
+
+**Lote que lo motiva:** cierre del proyecto (sin lote nuevo)
+
+| Área | Cambio |
+|---|---|
+| README | Estado final: todas las fases cerradas, qué funciona de punta a punta, KPIs medidos, estructura del repositorio, comandos de operación, demo y prueba de humo, y lo que queda como decisión del equipo. Antes describía la v2.25. |
+| Costos (7.3) | Con el pedido del usuario de cerrar los pendientes: etiqueta de asignación de costos `project` activada en AWS Billing. `component` todavía no aparece en Billing (hasta 24 h); queda el comando en ARCHITECTURE §3.31.1 y en `validation-7-3.md`. |
+| Pendiente | El CD y el correo de la alarma de Glue necesitan un `terraform apply` que crea confianza OIDC entre el repositorio público y las dos nubes: el clasificador de permisos de la sesión lo bloqueó sin una autorización explícita del usuario para ese apply. Revocar el token de Mastodon (solo el dueño de la cuenta) y dar de baja QuickSight después de la sustentación. |
+| Documento | `README.md`; ARCHITECTURE §3.31.1 (trampas); `validation-7-3.md` (problemas); cabeceras a 2.62. |
 
 ## v2.61 · desde v2.60
 
