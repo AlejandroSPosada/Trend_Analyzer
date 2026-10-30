@@ -23,9 +23,9 @@ Como las APIs reales de Reddit, Facebook e Instagram imponen aprobaciones y limi
 | [`docs/INFORME.md`](docs/INFORME.md) | **Informe tecnico final**: arquitectura, decisiones, KPIs medidos con su evidencia, limitaciones y modelos |
 | [`docs/SUSTENTACION.md`](docs/SUSTENTACION.md) · [`docs/DEMO.md`](docs/DEMO.md) | Guion de la sustentacion (7 etapas, plan B, registro del ensayo) y guion de la demo en vivo |
 | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Operacion: encender y apagar, reiniciar el simulador, reprocesar desde `raw/`, DLQ y respuesta a cada alerta |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Fuente de verdad** (version vigente 2.62): arquitectura, contratos de comunicacion (sec. 5), decisiones (ADR), riesgos y preguntas abiertas |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Fuente de verdad** (version vigente 2.63): arquitectura, contratos de comunicacion (sec. 5), decisiones (ADR), riesgos y preguntas abiertas |
 | [`docs/PLAN.md`](docs/PLAN.md) | Plan por fases y lotes, matriz de trazabilidad Fase · Lote -> HU y estado del proyecto (sec. 3) |
-| [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | Historial de versiones (v2.2 -> v2.62), una entrada por version |
+| [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | Historial de versiones (v2.2 -> v2.63), una entrada por version |
 | [`docs/HU.md`](docs/HU.md) | Backlog: 48 historias de usuario (HU-001 a HU-048) con criterios de aceptacion |
 | [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) · [`docs/CATALOG.md`](docs/CATALOG.md) · [`docs/LINEAGE.md`](docs/LINEAGE.md) | Gobierno de datos (DAMA-DMBOK, Ley 1581), catalogo y linaje |
 | [`docs/ACTIVE_SERVICES.md`](docs/ACTIVE_SERVICES.md) | Que cuesta dinero y como encender, comprobar y apagar cada servicio, en local y en GCP |
@@ -167,7 +167,7 @@ El simulador agrega lo que el texto no trae (red social, usuario, fechas, engage
 ├── README.md                              <- este archivo
 ├── .gitignore                             <- incluye terraform.tfvars
 ├── .pre-commit-config.yaml                <- gitleaks, formato
-├── .github/workflows/                     <- ci.yml (pruebas, Terraform, imagenes, gitleaks) y cd.yml (OIDC; apagado)
+├── .github/workflows/                     <- ci.yml (pruebas, Terraform, imagenes, gitleaks) y cd.yml (OIDC; imagenes y plan)
 │
 ├── docs/
 │   ├── INFORME.md  SUSTENTACION.md  DEMO.md  RUNBOOK.md   <- informe final, guiones y operacion (Lote 8.1)
@@ -262,12 +262,14 @@ Plan por fases (detalle y lotes en [`docs/PLAN.md`](docs/PLAN.md) sec. 1; estado
 | 4 · Lakehouse AWS | Trusted, Curated, aristas, orquestacion | HU-007, HU-026 a HU-030 | ✅ Cerrada (v2.40) |
 | 5 · Calidad y gobernanza | Profiling, reglas, catalogo, linaje, prueba E2E | HU-031 a HU-036, HU-048 | ✅ Cerrada (v2.46) |
 | 6 · Serving y alertas | QuickSight, alertas, escenarios de demo | HU-037 a HU-040 | ✅ Cerrada (v2.53) |
-| 7 · CI/CD y costos | Actions, observabilidad, presupuesto | HU-041 a HU-043 | ✅ Cerrada (v2.60); el CD esta escrito y apagado (HU-041 🟨) |
+| 7 · CI/CD y costos | Actions, observabilidad, presupuesto | HU-041 a HU-043 | ✅ Cerrada (v2.60); CD activado y verde (v2.63) |
 | 8 · Informe | Informe tecnico, sustentacion, runbook | HU-044, HU-045 | ✅ Cerrada (v2.61) |
 
-**Todos los lotes del plan estan cerrados**, cada uno con su validacion automatica (`project/scripts/validate_*.py`), su guia en `docs/validation/` y su evidencia en `project/evidencia/`. El ensayo completo de la sustentacion en la nube (29-oct-2026, 95 min) paso de punta a punta: ola de demo ×2,8, alerta notificada a los 87 s del fin de la ventana, prueba de humo de 430 s y tablero refrescado.
+**Todos los lotes del plan estan cerrados y las 48 historias de usuario cumplidas**, cada lote con su validacion automatica (`project/scripts/validate_*.py`), su guia en `docs/validation/` y su evidencia en `project/evidencia/`. El ensayo completo de la sustentacion en la nube (29-oct-2026, 95 min) paso de punta a punta: ola de demo ×2,8, alerta notificada a los 87 s del fin de la ventana, prueba de humo de 430 s y tablero refrescado.
 
-**Pendiente, decision del equipo (no bloquea la entrega):** activar el CD (`docs/validation/validation-7-1.md`, «Activar el CD»), la etiqueta de costos `component` en AWS Billing (`project` ya esta activa), un correo para la alarma de Glue (`alarm_emails`) y dar de baja QuickSight despues de la sustentacion.
+**CI/CD:** la CI corre en cada push y pull request; el CD (OIDC, solo `main`) publica las imagenes con Cloud Build y corre `terraform plan` en GCP y AWS en cada push que toque infraestructura o servicios (CD #7 verde, «No changes» en las dos nubes).
+
+**Pendiente (no bloquea la entrega):** activar la etiqueta de costos `component` en AWS Billing cuando aparezca (`project` ya esta activa), confirmar el correo de suscripcion de AWS para la alarma de Glue y dar de baja QuickSight despues de la sustentacion.
 
 ---
 

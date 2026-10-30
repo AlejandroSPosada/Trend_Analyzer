@@ -108,6 +108,19 @@ def test_github_part_ok_and_failure(tmp_path, monkeypatch):
     code, ev, _out = _run(["github"], tmp_path, lambda p: http(p, "failure"))
     assert code == 1 and {s["id"]: s["status"] for s in ev["parts"]["G"]["steps"]}["G1"] == "FALLA"
 
+    def cd_on(path, cd_conclusion):
+        if "/runs/2/jobs" in path:
+            return {"jobs": [{"name": "images", "conclusion": cd_conclusion}, {"name": "plan (gcp)", "conclusion": "success"}]}
+        if "/runs/1/jobs" in path:
+            return http(path)
+        runs = _runs()
+        runs[1]["conclusion"] = cd_conclusion
+        return {"workflow_runs": runs}
+
+    for cd_conclusion, expected in (("success", "OK"), ("failure", "FALLA")):
+        _code, ev, _out = _run(["github"], tmp_path, lambda p, c=cd_conclusion: cd_on(p, c))
+        assert {s["id"]: s["status"] for s in ev["parts"]["G"]["steps"]}["G2"] == expected
+
 
 def test_github_part_without_runs_waits_and_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(v, "on_windows", lambda: False)

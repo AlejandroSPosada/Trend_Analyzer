@@ -1,10 +1,22 @@
 # TrendAnalyzer · CHANGELOG
 
 > Historial de versiones del proyecto: una entrada por versión, la más reciente primero. Cada entrada indica el lote que motiva los cambios.
-> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.62**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
+> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.63**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
 > Plan, trazabilidad HU y estado por lote: [`PLAN.md`](PLAN.md).
 
 ---
+
+## v2.63 · desde v2.62
+
+**Lote que lo motiva:** Lote 7.1 (HU-041) · CD activado; Lote 7.2 · correo de la alarma
+
+| Área | Cambio |
+|---|---|
+| CD | Con la autorización del usuario: `github_cd_enabled = true` (GCP 10 recursos, AWS 3 con el proveedor OIDC existente), variables y secretos del CD en GitHub y `TA_CD_ENABLED = true`. **CD #7 `success`** sobre `0333dd1`: tres imágenes publicadas y los dos `plan` con «No changes». |
+| Corregido | El `sub` de GitHub llega con los ID del dueño y del repositorio: `ta-github-cd` acepta los dos formatos. `sa-github-cd`: `roles/viewer` (en lugar de `logging.viewer`) y `serviceAccountUser` solo sobre la cuenta de Cloud Build. `ta-github-cd`: `kms:ListAliases` y `kms:DescribeKey`. `validate71` G2 acepta el CD encendido y verde (FALLA si falla). |
+| Alarma de Glue | `alarm_emails` con el correo de las alertas: suscripción de SNS creada; activa cuando el usuario confirme el correo de AWS. |
+| Estado | 7.1 ✅ y **HU-041 ✅**: con esto quedan cerradas las 48 historias de usuario. Quedan del usuario: revocar el token de Mastodon, activar `component` en Billing cuando aparezca y dar de baja QuickSight después de la sustentación. |
+| Documento | ARCHITECTURE §3.30 («CD activado»), tablas de §3.30, árbol de §6; `validation-7-1.md`, `validation-7-2.md`; `INFORME.md` (ADR-34); `README.md`; PLAN.md §3; HU.md (HU-041 ✅); evidencia `project/evidencia/validacion_7_1.json`; cabeceras a 2.63. |
 
 ## v2.62 · desde v2.61
 

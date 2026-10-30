@@ -79,7 +79,7 @@ Las 37 decisiones están en `ARCHITECTURE.md` §9, cada una con su alternativa d
 | ADR-31 | Tablero en QuickSight Enterprise con SPICE (respuesta < 3 s) |
 | ADR-32 | Alertas detectadas en Dataflow, *cooldown* de 15 min y correo por una política basada en logs |
 | ADR-33 | La ola de demo se suma al tráfico normal (no lo reemplaza) |
-| ADR-34 | CI sin credenciales; CD con OIDC, apagado hasta que el dueño lo active |
+| ADR-34 | CI sin credenciales; CD con OIDC (solo este repositorio y `main`), activado y verde desde v2.63 |
 | ADR-35/36 | Alertas de gasto por olvido; observabilidad solo con métricas del sistema |
 
 ## 5. Contratos

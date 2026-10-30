@@ -234,38 +234,44 @@
     "G": {
       "title": "GitHub Actions: la CI del commit en main y el CD apagado",
       "status": "OK",
-      "started_at": "2026-10-29T05:15:33.429838+00:00",
-      "finished_at": "2026-10-29T05:19:36.509668+00:00",
+      "started_at": "2026-10-30T01:33:39.693369+00:00",
+      "finished_at": "2026-10-30T01:33:41.714715+00:00",
       "steps": [
         {
           "id": "G1",
           "title": "CI en GitHub Actions",
           "status": "OK",
-          "detail": "CI #3 completed/success (push) · terraform fmt y validate: success, secretos (gitleaks y tfvars): success, imagen simulator (pruebas dentro): success, imagen exporter (pruebas dentro): success, imagen alerts (pruebas dentro): success, pytest (contratos, identidad y suite completa): success · https://github.com/AlejandroSPosada/Trend_Analyzer/actions/runs/40822328578",
+          "detail": "CI #12 completed/success (push) · pytest (contratos, identidad y suite completa): success, imagen simulator (pruebas dentro): success, terraform fmt y validate: success, imagen exporter (pruebas dentro): success, imagen alerts (pruebas dentro): success, secretos (gitleaks y tfvars): success · https://github.com/AlejandroSPosada/Trend_Analyzer/actions/runs/40986140593",
           "data": {
-            "run_id": 40822328578,
+            "run_id": 40986140593,
             "conclusion": "success",
             "jobs": {
-              "terraform fmt y validate": "success",
-              "secretos (gitleaks y tfvars)": "success",
+              "pytest (contratos, identidad y suite completa)": "success",
               "imagen simulator (pruebas dentro)": "success",
+              "terraform fmt y validate": "success",
               "imagen exporter (pruebas dentro)": "success",
               "imagen alerts (pruebas dentro)": "success",
-              "pytest (contratos, identidad y suite completa)": "success"
+              "secretos (gitleaks y tfvars)": "success"
             },
-            "sha": "b3b5ac38019ce6ac1017086b42ed840f5d29801d",
-            "minutes": 3.7
+            "sha": "0333dd13033adcd95d4aaaa4af3ae2e8960843b7",
+            "minutes": 3.6
           }
         },
         {
           "id": "G2",
-          "title": "CD apagado",
+          "title": "CD: apagado (trabajos saltados) o encendido y verde",
           "status": "OK",
-          "detail": "sin corrida de CD para este commit (no tocó rutas del CD o se saltó entera)",
-          "data": {}
+          "detail": "CD #7 completed/success (push) · {'terraform plan (gcp)': 'success', 'publicar imágenes (Cloud Build)': 'success', 'terraform plan (aws)': 'success'}",
+          "data": {
+            "jobs": {
+              "terraform plan (gcp)": "success",
+              "publicar imágenes (Cloud Build)": "success",
+              "terraform plan (aws)": "success"
+            }
+          }
         }
       ]
     }
   },
-  "updated_at": "2026-10-29T05:19:36.509768+00:00"
+  "updated_at": "2026-10-30T01:33:41.714847+00:00"
 }

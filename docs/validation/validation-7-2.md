@@ -117,7 +117,8 @@ La del 6.2: Dataflow drenado, simulador apagado, sin `ta-verify-*`.
 | O · Apagado | OK (2): todo apagado, sin `ta-verify-*` |
 
 Las tres primeras corridas de `fire` fallaron en F3 por cortes de red de WSL al guardar el estado de Terraform:
-corregido (`state push` automático). Pendiente, decisión del usuario: un correo en `alarm_emails` para la alarma de Glue.
+corregido (`state push` automático). *(v2.63)* `alarm_emails` ya tiene el correo de las alertas: la suscripción
+queda activa cuando el usuario confirma el correo de AWS.
 
 ## Problemas frecuentes
 

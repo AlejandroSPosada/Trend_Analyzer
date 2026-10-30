@@ -380,9 +380,12 @@ def part_github(ctx: Ctx) -> int:
     if cd:
         cd_jobs = jobs_summary((ctx.github(f"/repos/{GITHUB_REPO}/actions/runs/{cd['id']}/jobs?per_page=50") or {}).get("jobs") or [])
         skipped = cd.get("conclusion") in ("skipped", "success") and all(v == "skipped" for v in cd_jobs.values())
-        part.add("G2", "CD apagado: sus trabajos se saltan", OK if skipped else AVISO, f"{run_summary(cd)} · {cd_jobs}", jobs=cd_jobs)
+        # v2.63: el CD está encendido (TA_CD_ENABLED); apagado, sus trabajos se saltan.
+        passed = cd.get("conclusion") == "success" and bool(cd_jobs) and all(v == "success" for v in cd_jobs.values())
+        status = OK if skipped or passed else (AVISO if cd.get("status") != "completed" else FALLA)
+        part.add("G2", "CD: apagado (trabajos saltados) o encendido y verde", status, f"{run_summary(cd)} · {cd_jobs}", jobs=cd_jobs)
     else:
-        part.add("G2", "CD apagado", OK, "sin corrida de CD para este commit (no tocó rutas del CD o se saltó entera)")
+        part.add("G2", "CD", OK, "sin corrida de CD para este commit (no tocó rutas del CD)")
     return part.finish()
 
 

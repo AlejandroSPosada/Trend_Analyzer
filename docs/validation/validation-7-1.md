@@ -90,12 +90,18 @@ cambiar, 0 a destruir** (los módulos nuevos tienen `count = 0`).
 
 ## Activar el CD (decisión del usuario)
 
+> **Activado el 29-oct-2026 (v2.63):** CD #7 verde (imágenes publicadas y los dos `plan` con «No changes»). Además
+> de estos pasos hicieron falta: `github_repository_with_ids` en AWS (GitHub manda el `sub` con los ID del dueño y
+> del repositorio), `roles/viewer` y `serviceAccountUser` sobre la cuenta de Cloud Build para `sa-github-cd`, y
+> `kms:ListAliases`/`kms:DescribeKey` para `ta-github-cd`; ya están en Terraform. Si cambian los `terraform.tfvars`,
+> volver a cargar los secretos con `gh secret set`.
+
 1. En `infra/gcp/environments/dev/terraform.tfvars` y en `infra/aws/environments/dev/terraform.tfvars`:
    `github_cd_enabled = true`. Si la cuenta de AWS ya tiene el proveedor OIDC de GitHub (es uno por cuenta; la
    comparte Campus Locator), poner también `github_oidc_provider_arn = "<su ARN>"`. Luego `terraform apply` en las
    dos raíces: crea el pool `ta-github` con el proveedor `github` (solo este repositorio en `main`), `sa-github-cd`
    (Artifact Registry `ta-images`, Cloud Build, el bucket `{proyecto}_cloudbuild` y lectura del estado) y el rol
-   `ta-github-cd` (`ViewOnlyAccess` y lectura del estado).
+   `ta-github-cd` (`ViewOnlyAccess`, lectura del estado y los metadatos de KMS).
 2. En GitHub, Settings → Secrets and variables → Actions:
    - **Variables:** `TA_CD_ENABLED = true`, `TA_GCP_PROJECT`, `TA_GCP_WIF_PROVIDER` y `TA_GCP_CD_SA` (outputs
      `github_cd_*` de `infra/gcp`), `TA_AWS_CD_ROLE` (output `github_cd_role_arn` de `infra/aws`).
