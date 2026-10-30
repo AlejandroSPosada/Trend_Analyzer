@@ -44,6 +44,18 @@ variable "tfstate_bucket" {
   type        = string
 }
 
+variable "build_service_account" {
+  description = "Cuenta con la que Cloud Build corre las construcciones (la de Compute por defecto, con cloudbuild.builds.builder)."
+  type        = string
+}
+
+# v2.63: `gcloud builds submit` exige actuar como la cuenta de la construcción. Solo sobre esa cuenta, no en el proyecto.
+resource "google_service_account_iam_member" "build_act_as" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${var.build_service_account}"
+  role               = "roles/iam.serviceAccountUser"
+  member             = google_service_account.cd.member
+}
+
 resource "google_iam_workload_identity_pool" "github" {
   project                   = var.project_id
   workload_identity_pool_id = "ta-github"

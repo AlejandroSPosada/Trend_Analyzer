@@ -9,6 +9,8 @@ module "github_cd" {
   region              = var.region
   artifact_repository = "ta-images"
   tfstate_bucket      = "${var.project_id}-ta-tfstate"
+  # Cloud Build construye con la cuenta por defecto de Compute (solo tiene roles/cloudbuild.builds.builder).
+  build_service_account = "${data.google_project.alerts.number}-compute@developer.gserviceaccount.com"
 }
 
 variable "github_cd_enabled" {

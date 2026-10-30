@@ -110,6 +110,12 @@ data "aws_iam_policy_document" "state" {
     actions   = ["s3:GetObject"]
     resources = ["arn:aws:s3:::${var.tfstate_bucket}/*"]
   }
+  # v2.63: el plan lee el alias de la llave del lake (data "aws_kms_alias") y ViewOnlyAccess no trae ListAliases.
+  # Solo metadatos: ni cifrar ni descifrar.
+  statement {
+    actions   = ["kms:ListAliases", "kms:DescribeKey"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "state" {
