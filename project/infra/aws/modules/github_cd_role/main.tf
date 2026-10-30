@@ -27,6 +27,14 @@ variable "branch" {
   default = "main"
 }
 
+# v2.63: GitHub manda el `sub` con los ID inmutables del dueño y del repositorio
+# (repo:Dueño@id/Repo@id:ref:refs/heads/main); con solo el formato por nombre, AssumeRoleWithWebIdentity daba AccessDenied.
+variable "repository_with_ids" {
+  description = "Dueño@id/Repo@id, el mismo repositorio en el formato con ID del sub. Vacío = solo el formato por nombre."
+  type        = string
+  default     = ""
+}
+
 variable "tfstate_bucket" {
   type = string
 }
@@ -73,7 +81,10 @@ data "aws_iam_policy_document" "trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.repository}:ref:refs/heads/${var.branch}"]
+      values = compact([
+        "repo:${var.repository}:ref:refs/heads/${var.branch}",
+        var.repository_with_ids == "" ? "" : "repo:${var.repository_with_ids}:ref:refs/heads/${var.branch}",
+      ])
     }
   }
 }

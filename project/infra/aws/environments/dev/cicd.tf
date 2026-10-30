@@ -6,6 +6,7 @@ module "github_cd" {
   source               = "../../modules/github_cd_role"
   providers            = { aws = aws.cicd }
   repository           = var.github_repository
+  repository_with_ids  = var.github_repository_with_ids
   tfstate_bucket       = "ta-${var.env}-${var.aws_account_id}-tfstate"
   create_oidc_provider = var.github_oidc_provider_arn == ""
   oidc_provider_arn    = var.github_oidc_provider_arn
@@ -22,6 +23,12 @@ variable "github_repository" {
   description = "owner/nombre del repositorio que puede asumir el rol (solo la rama main)."
   type        = string
   default     = "AlejandroSPosada/Trend_Analyzer"
+}
+
+variable "github_repository_with_ids" {
+  description = "El mismo repositorio como Dueño@id/Repo@id: así llega el `sub` del token de GitHub (v2.63)."
+  type        = string
+  default     = "AlejandroSPosada@142058005/Trend_Analyzer@1346238791"
 }
 
 variable "github_oidc_provider_arn" {

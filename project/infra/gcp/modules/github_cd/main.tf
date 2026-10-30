@@ -91,7 +91,10 @@ resource "google_project_iam_member" "project" {
   for_each = toset([
     "roles/cloudbuild.builds.editor", # gcloud builds submit
     "roles/serviceusage.serviceUsageConsumer",
-    "roles/logging.viewer", # ver el log de la construcción
+    # Solo lectura, como ViewOnlyAccess en AWS (v2.63): el plan lee data sources (sa-exporter, el proyecto) aun sin
+    # refrescar, y `gcloud builds submit` comprueba el bucket {proyecto}_cloudbuild y sigue el log de la construcción.
+    # Con solo logging.viewer la primera corrida del CD falló en los tres trabajos.
+    "roles/viewer",
   ])
   project = var.project_id
   role    = each.value
