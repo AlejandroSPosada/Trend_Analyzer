@@ -1,10 +1,20 @@
 # TrendAnalyzer · CHANGELOG
 
 > Historial de versiones del proyecto: una entrada por versión, la más reciente primero. Cada entrada indica el lote que motiva los cambios.
-> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.63**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
+> Fuente de verdad: [`ARCHITECTURE.md`](ARCHITECTURE.md) (versión vigente **2.64**). Las referencias `§N` de este archivo apuntan a ese documento, salvo las marcadas `PLAN.md §N`.
 > Plan, trazabilidad HU y estado por lote: [`PLAN.md`](PLAN.md).
 
 ---
+
+## v2.64 · desde v2.63
+
+**Lote que lo motiva:** cierre del proyecto (sin lote nuevo)
+
+| Área | Cambio |
+|---|---|
+| Diagrama | `docs/trend_analyzer_multicloud.drawio` pasa de la v2.5 a la v2.63. Corregido: «Great Expectations / dbt» → Great Expectations sobre Raw, Trusted y Curated con `dq_results` (dbt se descartó). Nuevo: Cloud Build + Artifact Registry (`ta-images`), `ta-alert-notifier` (Dataflow → `ta-alerts` → notificador → log → correo), tablero y alertas de tendencia, operación y gasto en Monitoring, CloudWatch con estados de Glue, tablero y alarma → SNS `ta-observabilidad`, CI y CD (OIDC) en GitHub Actions, EventBridge Scheduler, el escenario de demo del simulador, `dlq_events` y `dq_results` en BigQuery y los costos en la nota. El flujo principal no cambia. |
+| Pendiente | Exportar el `.drawio` a `docs/trend_analyzer_multicloud.jpg` desde diagrams.net (el README muestra ese JPG; hasta entonces muestra la v2.5). |
+| Documento | `README.md` y ARCHITECTURE §6 (versión del diagrama); `INFORME.md` (§ infraestructura); cabeceras a 2.64. |
 
 ## v2.63 · desde v2.62
 

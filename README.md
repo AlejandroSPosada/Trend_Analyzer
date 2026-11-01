@@ -23,9 +23,9 @@ Como las APIs reales de Reddit, Facebook e Instagram imponen aprobaciones y limi
 | [`docs/INFORME.md`](docs/INFORME.md) | **Informe tecnico final**: arquitectura, decisiones, KPIs medidos con su evidencia, limitaciones y modelos |
 | [`docs/SUSTENTACION.md`](docs/SUSTENTACION.md) · [`docs/DEMO.md`](docs/DEMO.md) | Guion de la sustentacion (7 etapas, plan B, registro del ensayo) y guion de la demo en vivo |
 | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | Operacion: encender y apagar, reiniciar el simulador, reprocesar desde `raw/`, DLQ y respuesta a cada alerta |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Fuente de verdad** (version vigente 2.63): arquitectura, contratos de comunicacion (sec. 5), decisiones (ADR), riesgos y preguntas abiertas |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **Fuente de verdad** (version vigente 2.64): arquitectura, contratos de comunicacion (sec. 5), decisiones (ADR), riesgos y preguntas abiertas |
 | [`docs/PLAN.md`](docs/PLAN.md) | Plan por fases y lotes, matriz de trazabilidad Fase · Lote -> HU y estado del proyecto (sec. 3) |
-| [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | Historial de versiones (v2.2 -> v2.63), una entrada por version |
+| [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | Historial de versiones (v2.2 -> v2.64), una entrada por version |
 | [`docs/HU.md`](docs/HU.md) | Backlog: 48 historias de usuario (HU-001 a HU-048) con criterios de aceptacion |
 | [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) · [`docs/CATALOG.md`](docs/CATALOG.md) · [`docs/LINEAGE.md`](docs/LINEAGE.md) | Gobierno de datos (DAMA-DMBOK, Ley 1581), catalogo y linaje |
 | [`docs/ACTIVE_SERVICES.md`](docs/ACTIVE_SERVICES.md) | Que cuesta dinero y como encender, comprobar y apagar cada servicio, en local y en GCP |
@@ -35,7 +35,7 @@ Como las APIs reales de Reddit, Facebook e Instagram imponen aprobaciones y limi
 | [`project/src/streaming/README.md`](project/src/streaming/README.md) · [`ENRICHED.md`](project/src/streaming/ENRICHED.md) | Pipeline de streaming (Lote 2.1) · rama enriched: anonimizacion, `enriched/` y BigQuery (Lote 2.2) |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | Glosario del proyecto |
 | [`docs/NOTAS.md`](docs/NOTAS.md) | Notas de trabajo |
-| [`docs/trend_analyzer_multicloud.drawio`](docs/trend_analyzer_multicloud.drawio) | Diagrama editable en [diagrams.net](https://app.diagrams.net) (v2.5) |
+| [`docs/trend_analyzer_multicloud.drawio`](docs/trend_analyzer_multicloud.drawio) | Diagrama editable en [diagrams.net](https://app.diagrams.net) (v2.63) |
 | [`docs/trend_analyzer_multicloud.jpg`](docs/trend_analyzer_multicloud.jpg) | Exportacion del diagrama |
 
 ![Arquitectura multicloud](docs/trend_analyzer_multicloud.jpg)
@@ -180,7 +180,7 @@ El simulador agrega lo que el texto no trae (red social, usuario, fechas, engage
 │   ├── validation/                        <- guias de validacion por lote (validation-2-2.md a validation-8-1.md)
 │   ├── GLOSSARY.md                        <- glosario del proyecto
 │   ├── NOTAS.md                           <- notas de trabajo
-│   ├── trend_analyzer_multicloud.drawio   <- diagrama editable (v2.5)
+│   ├── trend_analyzer_multicloud.drawio   <- diagrama editable (v2.63)
 │   └── trend_analyzer_multicloud.jpg      <- exportacion del diagrama
 │
 └── project/                               <- codigo, contratos e infraestructura

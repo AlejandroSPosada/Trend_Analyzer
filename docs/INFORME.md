@@ -60,7 +60,7 @@ Dataflow ta-stream-dev (1 worker): valida (DLQ) · deduplica · HMAC de user_id 
 | Operación | CI en GitHub Actions, tableros y alertas en Cloud Monitoring y CloudWatch, alertas de gasto, `on.py`/`off.py`/`status.py` | §3.30–§3.32 |
 
 Infraestructura como código: Terraform con estado remoto en las dos nubes (4 raíces, ~30 módulos). El diagrama de
-arquitectura original está en `docs/trend_analyzer_multicloud.jpg` y el linaje por columna en
+arquitectura (v2.63) está en `docs/trend_analyzer_multicloud.jpg`, exportado de su `.drawio`, y el linaje por columna en
 [`LINEAGE.md`](LINEAGE.md).
 
 ## 4. Decisiones principales

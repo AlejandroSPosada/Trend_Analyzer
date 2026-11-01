@@ -1,6 +1,6 @@
 # TrendAnalyzer · ARCHITECTURE
 
-> Documento maestro de arquitectura y contratos. **Versión vigente: 2.63.**
+> Documento maestro de arquitectura y contratos. **Versión vigente: 2.64.**
 > Historial de versiones: [`CHANGELOG.md`](CHANGELOG.md) · Plan por fases, trazabilidad HU y estado: [`PLAN.md`](PLAN.md) · Historias de usuario: `HU.md` · Visión general: `README.md`.
 > Fuentes de verdad combinadas: `README.md` + `diagramaFINAL.drawio` + decisiones de este documento.
 
@@ -3707,7 +3707,7 @@ infra/
 │   │   └── validation-5-1.md              <- Lote 5.1: validación paso a paso (automática con validate_5_1.py)
 │   ├── GLOSSARY.md                        <- glosario del proyecto
 │   ├── NOTAS.md                           <- notas de trabajo
-│   ├── trend_analyzer_multicloud.drawio   <- diagrama editable (v2.5)
+│   ├── trend_analyzer_multicloud.drawio   <- diagrama editable (v2.63)
 │   └── trend_analyzer_multicloud.jpg      <- exportación del diagrama
 │
 └── project/                               <- código, contratos e infraestructura (las rutas de este documento son relativas a aquí)
