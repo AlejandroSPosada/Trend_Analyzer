@@ -49,7 +49,7 @@
         <mxCell id="gcs_datasets_icon" parent="gcs_datasets" style="shape=mxgraph.gcp2.cloud_storage;html=1;aspect=fixed;strokeColor=none;fillColor=#4285F4;shadow=0;part=1;connectable=0;" value="" vertex="1">
           <mxGeometry x="14" y="17" width="44" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="sim" parent="1" style="rounded=1;arcSize=14;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;strokeWidth=1;shadow=1;align=left;verticalAlign=middle;spacingLeft=65;fontSize=12;fontColor=#344054;" value="&lt;b&gt;stream-simulator&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#667085&quot;&gt;Cloud Run · 1 msg / 1–3 s&lt;br&gt;+ generador · escenario de demo&lt;/font&gt;" vertex="1">
+        <mxCell id="sim" parent="1" style="rounded=1;arcSize=14;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;strokeWidth=1;shadow=1;align=left;verticalAlign=middle;spacingLeft=65;fontSize=12;fontColor=#344054;" value="&lt;b&gt;stream-simulator&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#667085&quot;&gt;Cloud Run&lt;br&gt;1 msg cada 1–3 s&lt;br&gt;generador · demo&lt;/font&gt;" vertex="1">
           <mxGeometry x="550" y="390" width="205" height="78" as="geometry" />
         </mxCell>
         <mxCell id="sim_icon" parent="sim" style="shape=mxgraph.gcp2.cloud_run;html=1;aspect=fixed;strokeColor=none;fillColor=#4285F4;shadow=0;part=1;connectable=0;" value="" vertex="1">
@@ -70,7 +70,7 @@
         <mxCell id="secret" parent="1" style="rounded=1;arcSize=14;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;strokeWidth=1;shadow=1;align=left;verticalAlign=middle;spacingLeft=65;fontSize=12;fontColor=#344054;" value="&lt;b&gt;Secret Manager&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#667085&quot;&gt;Llave HMAC&lt;/font&gt;" vertex="1">
           <mxGeometry x="795" y="160" width="185" height="78" as="geometry" />
         </mxCell>
-        <mxCell id="secret_icon" parent="secret" style="shape=mxgraph.gcp2.secret_manager;html=1;aspect=fixed;strokeColor=none;fillColor=#4285F4;shadow=0;part=1;connectable=0;" value="" vertex="1">
+        <mxCell id="secret_icon" parent="secret" style="shape=mxgraph.gcp2.key_management_service;html=1;aspect=fixed;strokeColor=none;fillColor=#4285F4;shadow=0;part=1;connectable=0;" value="" vertex="1">
           <mxGeometry x="14" y="17" width="44" height="44" as="geometry" />
         </mxCell>
         <mxCell id="bq" parent="1" style="rounded=1;arcSize=14;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;strokeWidth=1;shadow=1;align=left;verticalAlign=middle;spacingLeft=65;fontSize=12;fontColor=#344054;" value="&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#667085&quot;&gt;posts_enriched · trend_windows&lt;br&gt;dlq_events · dq_results&lt;/font&gt;" vertex="1">
@@ -324,10 +324,10 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="build" parent="1" style="rounded=1;arcSize=14;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;strokeWidth=1;shadow=1;align=left;verticalAlign=middle;spacingLeft=105;fontSize=12;fontColor=#344054;" value="&lt;b&gt;Cloud Build + Artifact Registry&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#667085&quot;&gt;imágenes ta-images (CD)&lt;/font&gt;" vertex="1">
+        <mxCell id="build" parent="1" style="rounded=1;arcSize=14;html=1;whiteSpace=wrap;fillColor=#FFFFFF;strokeColor=#D0D5DD;strokeWidth=1;shadow=1;align=left;verticalAlign=middle;spacingLeft=105;fontSize=12;fontColor=#344054;" value="&lt;b&gt;Cloud Build + Artifact Registry&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#667085&quot;&gt;imágenes&lt;br&gt;ta-images (CD)&lt;/font&gt;" vertex="1">
           <mxGeometry x="560" y="125" width="215" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="build_icon" parent="build" style="shape=mxgraph.gcp2.cloud_build;html=1;aspect=fixed;strokeColor=none;fillColor=#4285F4;shadow=0;part=1;connectable=0;" value="" vertex="1">
+        <mxCell id="build_icon" parent="build" style="shape=mxgraph.gcp2.container_builder;html=1;aspect=fixed;strokeColor=none;fillColor=#4285F4;shadow=0;part=1;connectable=0;" value="" vertex="1">
           <mxGeometry x="14" y="17" width="44" height="44" as="geometry" />
         </mxCell>
         <mxCell id="build_icon2" parent="build" style="shape=mxgraph.gcp2.container_registry;html=1;aspect=fixed;strokeColor=none;fillColor=#4285F4;shadow=0;part=1;connectable=0;" value="" vertex="1">
