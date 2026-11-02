@@ -2,7 +2,7 @@
 
 > Glosario de componentes, tecnologías, conceptos y **documentos del repositorio**.
 > Cada entrada tiene dos partes: **Qué es** (la tecnología o término explicado en general) y **Rol en TrendAnalyzer** (qué hace concretamente aquí).
-> **Versión 2.8 · 17 oct 2026** · Alineado con `ARCHITECTURE.md` v2.8 (fuentes Reddit, Facebook e Instagram simuladas con un generador de comentarios) y con `docs/trend_analyzer_multicloud.drawio` v2.5.
+> **Versión 2.64 · 1 nov 2026** · Alineado con `ARCHITECTURE.md` v2.64 y `PLAN.md` (todas las fases cerradas). El diagrama `docs/trend_analyzer_multicloud.drawio` está en la v2.63.
 > Si este glosario y `ARCHITECTURE.md` discrepan, manda `ARCHITECTURE.md`; este archivo se corrige en el mismo commit.
 
 ---
@@ -28,49 +28,57 @@
 
 TrendAnalyzer analiza **tendencias y emociones** en conversaciones digitales sobre marcas colombianas de bebidas (Postobón como marca propia; Pepsi y Sprite como competidores). Funciona en **dos nubes**:
 
-- **GCP** = plano *caliente*: recibe los eventos en segundos, los limpia, anonimiza, les aplica NLP en español y detecta tendencias en minutos.
-- **AWS** = plano de *lakehouse*: guarda todo en capas (Raw → Trusted → Curated), lo modela y lo sirve a dashboards.
+- **GCP** = plano *caliente*: recibe los eventos en segundos, los valida, deduplica, anonimiza, les aplica NLP en español, detecta tendencias y avisa por correo en minutos.
+- **AWS** = plano de *lakehouse*: guarda todo en capas (Raw → Trusted → Curated) junto con 180 días de histórico, lo modela y lo sirve a un tablero.
 
 Las fuentes (**Reddit, Facebook e Instagram**) están **simuladas**: un generador de comentarios en español colombiano produce el texto y el simulador inventa el resto (usuarios, engagement, fechas). Todo lo que viene después es un pipeline real. El objetivo es **ingeniería de datos** (ingesta, calidad, linaje, latencia), no conclusiones de negocio válidas.
 
 ```
-Generador de comentarios → stream-simulator → Pub/Sub → Dataflow → BigQuery + GCS
-                                                                        │
-                                                              gcs-to-s3 (cada 15 min)
-                                                                        ▼
-                                 S3 (Raw→Trusted→Curated) ← Glue → Athena → QuickSight
+Generador → ta-stream-simulator → Pub/Sub → Dataflow ─┬─► BigQuery (posts_enriched, trend_windows)
+                                                       ├─► GCS (raw/, enriched/, dlq/)
+                                                       └─► ta-alerts → notificador → correo
+                              enriched/ ── gcs-to-s3 (cada 15 min, OIDC) ──┐
+                                                                           ▼
+  S3 raw/ (+ histórico) → Glue (cada hora) → trusted/ → curated/ → Athena → QuickSight (SPICE)
 ```
+
+**Estado (v2.63):** las 9 fases y sus 28 lotes están cerrados, las 48 HU cumplidas y el ensayo completo de la sustentación pasó en la nube el 29-oct-2026 (`PLAN.md` §3).
 
 ---
 
 ## 2. El repositorio y sus documentos
 
-El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se documenta; en `project/` se construye**. Los workflows de CI, `.gitignore` y `.pre-commit-config.yaml` viven en la raíz.
+El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se documenta; en `project/` se construye**. Los workflows de CI/CD, `.gitignore`, `.pre-commit-config.yaml` y la configuración de gitleaks viven en la raíz.
 
 ```
-.                       README.md · .gitignore · .pre-commit-config.yaml · .github/workflows/
-├── docs/               ARCHITECTURE.md · GLOSSARY.md · HU.md · NOTAS.md · diagrama .drawio / .jpg
-└── project/            contracts/ · infra/ · scripts/ · src/ · docker-compose.yml
+.                       README.md · .gitignore · .pre-commit-config.yaml · .gitleaks.toml · .github/workflows/ (ci.yml, cd.yml)
+├── docs/               ARCHITECTURE · PLAN · CHANGELOG · HU · INFORME · SUSTENTACION · DEMO · RUNBOOK
+│                       GOVERNANCE · CATALOG · LINEAGE · ACTIVE_SERVICES · GLOSSARY · PREGUNTAS · NOTAS
+│                       validation/ (una guía por lote) · diagrama .drawio / .jpg
+└── project/            contracts/ · infra/ · scripts/ · src/ · evidencia/ · docker-compose*.yml · LOCAL_DEV.md
 ```
 
 ### `ARCHITECTURE.md` — la fuente de verdad
 
-**Qué es:** el documento maestro de arquitectura, contratos y plan de trabajo (versión actual 2.8). Un *documento vivo*: se versiona, tiene registro de cambios por versión (§1) y se actualiza con cada decisión.
+**Qué es:** el documento maestro de arquitectura y contratos (versión vigente **2.64**). Un *documento vivo*: se versiona y se actualiza con cada decisión. El historial de versiones está en `CHANGELOG.md`, y el plan y el estado, en `PLAN.md`.
 
-**Rol en TrendAnalyzer:** es **lo más importante del repositorio**, porque está pensado para que baste con leerlo (o adjuntarlo a una petición) para construir cualquier pieza sin tener que enviar el código ya hecho. Contiene, entre otros:
+**Rol en TrendAnalyzer:** es **lo más importante del repositorio**, porque está pensado para que baste con leerlo (o adjuntarlo a una petición) para construir cualquier pieza sin ver el código ya hecho. Contiene, entre otros:
 
 | Sección | Para qué sirve |
 |---|---|
-| §1 | Qué cambió y por qué (registro de versiones). |
-| §2 | Diagrama de la arquitectura objetivo. |
-| §3 | Cómo funciona el simulador y el generador de comentarios. |
-| **§5** | **Los contratos**: formatos, nombres, topics, tablas, IAM. Es la sección que hace innecesario enviar código. |
-| §7 | Fases, lotes y matriz de trazabilidad hacia las HU. |
-| §8 | Protocolo para pedir un lote de trabajo. |
-| §9 | ADR, riesgos y preguntas abiertas. |
-| §10 | Estado del proyecto por fase. |
+| §0 | Cómo usar el documento: qué leer según lo que se quiera hacer. |
+| §1 | La decisión central (fuentes simuladas) y las diferencias con el diagrama FINAL y el README. |
+| §2 | Diagrama de la arquitectura objetivo (Mermaid). |
+| §3 | El simulador y el generador (§3.1–§3.12) y una subsección por lote con lo que entregó y sus «Interfaces del lote» (§3.13–§3.33). |
+| §4 | Flujo extremo a extremo, etapa por etapa, con su latencia objetivo. |
+| **§5** | **Los contratos**: envelope, Pub/Sub, GCS, BigQuery, puente, S3/Glue/Athena/QuickSight, IAM, outputs de Terraform, reglas de calidad (§5.10) y parámetros operativos (§5.12). Es la sección que hace innecesario enviar código. |
+| §6 | Estructura del repositorio. |
+| §7 | Remite a `PLAN.md` (fases y lotes). |
+| §8 | Protocolo para pedir un lote de trabajo y cómo se entrega su validación. |
+| §9 | Las 37 ADR, los riesgos y las preguntas abiertas de la Fase 0. |
+| §10 | Remite a `PLAN.md` §3 (estado). |
 
-**Regla de oro:** si dos componentes se comunican, su interfaz vive en §5; si algo no está en §5, no es una interfaz y ningún otro componente debe depender de él. **Cuando una interfaz cambia, se cambia primero en `ARCHITECTURE.md` y luego en el código**, y en el mismo commit. Por eso también es lo primero que se adjunta al pedir cualquier trabajo.
+**Regla de oro:** si dos componentes se comunican, su interfaz vive en §5; si algo no está en §5, no es una interfaz y ningún otro componente debe depender de él. **Cuando una interfaz cambia, se cambia primero en `ARCHITECTURE.md` y luego en el código**, en el mismo commit.
 
 ### `GLOSSARY.md` — este archivo
 
@@ -80,9 +88,21 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 ### `HU.md` — historias de usuario
 
-**Qué es:** una **historia de usuario (HU)** describe una necesidad desde quien la tiene ("como analista quiero…") junto con sus **criterios de aceptación**, que dicen cuándo está cumplida. `HU.md` las reúne en formato **HU-000** (HU-001 a HU-048) y trae una tabla resumen de estado.
+**Qué es:** una **historia de usuario (HU)** describe una necesidad desde quien la tiene ("como analista quiero…") junto con sus **criterios de aceptación**, que dicen cuándo está cumplida. `HU.md` reúne 48, en formato **HU-000** (HU-001 a HU-048), con una tabla resumen de estado.
 
-**Rol en TrendAnalyzer:** define **qué significa "terminado"**. Cada fase y cada lote de `ARCHITECTURE.md` §7 declara las HU que cubre, y la **matriz de trazabilidad** (§7.1) asigna cada HU a exactamente un lote (o a la Fase 0). Una fase se cierra cuando todas sus HU cumplen sus criterios. `HU.md` es la fuente de verdad de las historias: si se agrega o reasigna una, se cambia primero allí y la matriz en el mismo commit. Las antiguas *US* del README se relacionan con las HU (p. ej. US-14 → HU-031).
+**Rol en TrendAnalyzer:** define **qué significa "terminado"**. Cada fase y cada lote de `PLAN.md` §1 declara las HU que cubre, y la **matriz de trazabilidad** (`PLAN.md` §2) asigna cada HU a exactamente un lote (o a la Fase 0). Una fase se cierra cuando todas sus HU cumplen sus criterios; hoy las 48 están cumplidas. `HU.md` es la fuente de verdad de las historias: si se agrega o reasigna una, se cambia allí y en `PLAN.md` §2 en el mismo commit. Las antiguas *US* del README se relacionan con las HU (p. ej. US-14 → HU-031).
+
+### `PLAN.md` — fases, trazabilidad y estado
+
+**Qué es:** el plan de trabajo por fases y lotes, sin fechas.
+
+**Rol en TrendAnalyzer:** §1 describe cada fase y sus lotes con las HU que cubren; §2 es la matriz Fase · Lote → HU con su responsable; §3 es **la única tabla de estado** (✅ cerrado · 🟨 en curso · ⬜ pendiente), con una nota por lote: qué se cerró, con qué validación y qué contratos se tocaron. Convención: cerrar un lote solo edita su fila de §3. No define contratos: para cualquier interfaz manda `ARCHITECTURE.md` §5.
+
+### `CHANGELOG.md` — historial de versiones
+
+**Qué es:** el registro de cambios del proyecto, una entrada por versión, la más reciente primero.
+
+**Rol en TrendAnalyzer:** cada versión (v2.2 → v2.64) dice qué lote la motiva y qué cambió por área: código, contratos, decisiones, correcciones encontradas al validar y documentos. Es donde quedan fechadas las **decisiones del usuario** y los problemas que aparecieron en las validaciones (filas «Corregido»). Antes vivía en `ARCHITECTURE.md` §1.4.
 
 ### `README.md`
 
@@ -96,41 +116,95 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 **Rol en TrendAnalyzer:** espacio informal para apuntes. **No es fuente de verdad**: lo que se decida y deba respetar el código se pasa a `ARCHITECTURE.md`.
 
+### `INFORME.md` — informe técnico
+
+**Qué es:** el informe técnico final del proyecto (HU-044).
+
+**Rol en TrendAnalyzer:** resume el problema, por qué las fuentes son simuladas, la arquitectura, las decisiones principales, los contratos, la **tabla de KPI medidos** frente al objetivo, las limitaciones, los modelos de NLP con su licencia y cómo reproducir cada cifra. La tabla de KPI no se escribe a mano: la genera `kpi_report.py` desde la evidencia de las validaciones, y una prueba exige que esté al día (ADR-37).
+
+### `SUSTENTACION.md` y `DEMO.md` — guiones
+
+**Qué es:** el guion de la sustentación (HU-045) y el de la demo del pico.
+
+**Rol en TrendAnalyzer:** `SUSTENTACION.md` dice qué encender desde T − 80 min (el baseline de las alertas necesita ~66 min de datos), qué muestra cada integrante en ~20 min, la ruta forzada hasta el tablero, el plan B y el registro del ensayo del 29-oct-2026. `DEMO.md` detalla la ola de demo con `demo_scenario.py`.
+
+### `RUNBOOK.md` — operación
+
+**Qué es:** el manual de operación (HU-045).
+
+**Rol en TrendAnalyzer:** cómo encender y apagar, reiniciar el simulador, reprocesar desde `raw/` (el lakehouse se reconstruye entero desde S3; el stream no se reinyecta), atender la DLQ y qué hacer ante cada alerta (tendencia, operación, gasto y presupuesto).
+
+### `ACTIVE_SERVICES.md` — qué cuesta dinero
+
+**Qué es:** la guía de los servicios que cobran mientras están encendidos.
+
+**Rol en TrendAnalyzer:** dice cómo encender, comprobar y apagar cada servicio, en local y en la nube, con `on.py`, `off.py` y `status.py` o con los comandos manuales. Es la referencia antes y después de cada validación o demo.
+
+### `GOVERNANCE.md`, `CATALOG.md` y `LINEAGE.md` — gobierno de datos
+
+**Qué es:** los tres entregables de gobernanza del Lote 5.3 (HU-034, HU-035 y HU-036).
+
+**Rol en TrendAnalyzer:** `GOVERNANCE.md` recorre las 11 áreas de DAMA-DMBOK con su evidencia y sus brechas, y trae la nota de la Ley 1581. `CATALOG.md` es el diccionario de datos **generado** desde las DDL (11 tablas, 108 columnas, cada una con su clase de privacidad). `LINEAGE.md` es el linaje de extremo a extremo y por columna, con un diagrama Mermaid hecho a mano (ADR-29).
+
+### `docs/validation/` — guías de validación
+
+**Qué es:** una guía paso a paso por cada lote validado (`validation-2-2.md` a `validation-8-1.md`).
+
+**Rol en TrendAnalyzer:** cada guía va por partes (preflight, pruebas, Terraform, local, nube y apagado) con el resultado esperado de cada paso, más el cierre y los problemas frecuentes. Su `project/scripts/validate_{fase}_{lote}.py` la corre de forma automática (ver *Validación de un lote*).
+
+### `PREGUNTAS.md` — banco de preguntas
+
+**Qué es:** preguntas abiertas de sustentación por rol, con respuestas guía, en formato Obsidian.
+
+**Rol en TrendAnalyzer:** apoyo para preparar la sustentación. No es fuente de verdad.
+
 ### Diagrama (`trend_analyzer_multicloud.drawio` y `.jpg`)
 
 **Qué es:** el diagrama editable de la arquitectura (formato draw.io) y su exportación a imagen.
 
-**Rol en TrendAnalyzer:** la vista gráfica de §2. Está alineado con la v2.5; se actualiza cuando cambia la arquitectura.
+**Rol en TrendAnalyzer:** la vista gráfica que muestra el README. El `.drawio` está en la **v2.63**: además de la arquitectura base (simulador, Pub/Sub, Dataflow, puente, lakehouse y QuickSight), muestra la rama de alertas (`ta-alerts` → notificador → correo), Cloud Build con `ta-images`, la observabilidad (Monitoring, CloudWatch y SNS), el CI/CD con OIDC y los costos. El `.jpg` se exporta a mano desde el `.drawio` con diagrams.net. El diagrama en texto es el Mermaid de `ARCHITECTURE.md` §2.
 
 ### `project/contracts/`
 
 **Qué es:** la copia **legible por máquina** de los contratos de §5: JSON Schemas (envelope, envelope enriquecido, un payload por red social, atributos de Pub/Sub), DDL de BigQuery y Athena, ejemplos válidos e inválidos y pruebas.
 
-**Rol en TrendAnalyzer:** convierte los contratos en algo **verificable**: los generadores y el CI validan eventos reales contra estos schemas, y un test comprueba que BigQuery, Athena y el envelope son coherentes entre sí. Se entregó en el Lote 0.1 (HU-001). Su `README.md` lista las decisiones tomadas y lo pendiente.
+**Rol en TrendAnalyzer:** convierte los contratos en algo **verificable**. Sus 18 pruebas comprueban que BigQuery, Athena y el envelope son coherentes entre sí; el simulador se valida contra los schemas con 1.000 eventos por fuente; las tablas de Glue (`tables.json`) y los schemas de BigQuery se generan desde estas DDL con pruebas de sincronía. Los comentarios de las DDL de Athena son además la fuente del catálogo (§9). Todo corre en la CI en cada PR. Se entregó en el Lote 0.1 (HU-001).
 
 ### Otras carpetas de `project/`
 
 | Ruta | Contenido |
 |---|---|
-| `infra/{gcp,aws}/` | Terraform: un módulo por recurso lógico y entornos en `environments/dev/`. |
-| `scripts/` | CLI del generador (`generate_comments.py`) y prueba de humo extremo a extremo (`smoke_e2e.py`). |
-| `src/common/` | Librería compartida (envelope, anonimización, NLP, mapeo de etiquetas) que usan Dataflow **y** el loader histórico, para que stream e histórico sean comparables. |
-| `src/simulator/` | Simulador y generador de comentarios. |
-| `src/streaming/`, `src/historical/`, `src/exporter/`, `src/lakehouse/`, `src/quality/` | Dataflow, loader histórico, exportador, Glue/dbt y calidad. |
-| `src/collectors/` | **Legado**: conectores reales de Mastodon, Reddit y RSS; no se despliega. |
-| `docker-compose.yml` | Entorno local con emulador de Pub/Sub, sin credenciales. |
+| `infra/{gcp,aws}/` | Terraform: `bootstrap/` (estado remoto), un módulo por pieza en `modules/` y el entorno en `environments/dev/` (4 raíces, ~30 módulos). |
+| `scripts/` | Puntos de entrada: `on.py`, `off.py`, `status.py`; `validate_{fase}_{lote}.py`; `demo_scenario.py`, `smoke_e2e.py`, `kpi_report.py`, `quicksight.py`, `run_dq.py`, `profile_data.py`; `load_historical.py`, `export_gcs_to_s3.py`, `generate_comments.py`; `build_*_image.sh`, `dataflow_job.sh`, `dataflow_template.py`, `local_*.sh` y `verify_*.py`. |
+| `src/common/` | Librería compartida (envelope, `event_id`, HMAC, hashtags, `label_map`, fila enriquecida, Parquet, llave HMAC y tablas de BigQuery) que usan Dataflow **y** el loader histórico, para que stream e histórico sean comparables. |
+| `src/simulator/` | Simulador, generador de comentarios, caos, escenario de demo y Dockerfile. |
+| `src/ingest_check/` | Verificador de la ingesta y topología del emulador (Lotes 1.4 y 1.5). |
+| `src/streaming/` | Pipeline de Dataflow: validación, deduplicación, DLQ, anonimización, NLP, tendencias, alertas y plantilla Flex. |
+| `src/historical/`, `src/exporter/` | Loader histórico (Lote 3.1) y exportador `gcs-to-s3` (Lote 3.2). |
+| `src/lakehouse/` | Jobs de Glue Raw → Trusted → Curated (con aristas), catálogo (`catalog_spec`) y consultas. |
+| `src/quality/`, `src/dq/` | Profiling (Lote 5.1) y Great Expectations (Lote 5.2). |
+| `src/smoke/`, `src/serving/`, `src/alerts/`, `src/demo/`, `src/report/` | Prueba de humo, tablero de QuickSight, notificador de alertas, cliente del escenario de demo y tabla de KPI del informe. |
+| `src/ops/` | Encendido, apagado y estado, y la lógica de cada `validate_*.py`, con sus pruebas. |
+| `evidencia/` | JSON y logs que dejan las validaciones; de ahí sale la tabla de KPI del informe. |
+| `docker-compose*.yml`, `local/`, `LOCAL_DEV.md` | Entorno local sin credenciales: emulador de Pub/Sub, simulador, validador y Dataflow con `DirectRunner` (también con NLP). |
 
 ### Lote
 
-**Qué es:** una unidad de trabajo de tamaño razonable, numerada `fase.lote` (p. ej. Lote 2.2).
+**Qué es:** una unidad de trabajo de tamaño razonable, numerada `fase.lote` (p. ej. Lote 2.2). El plan tiene 28.
 
-**Rol en TrendAnalyzer:** cada lote entrega un conjunto cerrado de archivos con pruebas, en las rutas exactas de §6, junto con la confirmación de qué criterios de aceptación de cada HU quedan cubiertos y una lista de **"contratos tocados"** (cambios que exigen actualizar §5 primero). Se pide con la **plantilla de §8** (lote, HU, contexto, entorno real, restricciones).
+**Rol en TrendAnalyzer:** cada lote entrega un conjunto cerrado de archivos con pruebas, en las rutas de `ARCHITECTURE.md` §6, junto con qué criterios de aceptación de cada HU cubre y una lista de **"contratos tocados"** (cambios que exigen actualizar §5 primero). Se pide con la plantilla de §8. Pasa por dos estados: **entregado** (código y pruebas listos) y **cerrado** (validado de punta a punta, casi siempre en la nube). Al cerrarlo se edita solo su fila en `PLAN.md` §3. Los 28 lotes están cerrados.
+
+### Validación de un lote (`validate_*.py`) y evidencia
+
+**Qué es:** la comprobación reproducible de que un lote funciona, desde las pruebas hasta la nube.
+
+**Rol en TrendAnalyzer:** cada lote validado tiene una guía (`docs/validation/validation-{fase}-{lote}.md`), un script (`project/scripts/validate_{fase}_{lote}.py`, con su lógica en `src/ops/` y pruebas sin red) y evidencia en `project/evidencia/` (`validacion_{fase}_{lote}.json` y los informes de los verificadores). Las partes suelen ser A (preflight), B (pruebas), C (Terraform: `plan`, `apply` y sin deriva), L (local), las de nube (D, E, F…) y el apagado (`off`). La evidencia nunca lleva secretos, `user_hash` ni textos completos.
 
 ### Fase
 
-**Qué es:** agrupación de lotes por objetivo (Fase 0 Alineación … Fase 8 Informe).
+**Qué es:** agrupación de lotes por objetivo: 0 Alineación, 1 Simulador, 2 Streaming GCP, 3 Histórico y puente, 4 Lakehouse AWS, 5 Calidad y gobernanza, 6 Serving y alertas, 7 CI/CD y costos, 8 Informe.
 
-**Rol en TrendAnalyzer:** ordena el plan hacia los dos hitos: **Sprint 2 (28 oct)** y **Sprint Final (11 nov)**. Las fases 1, 2 y 3 pueden trabajarse en paralelo una vez cerrada la Fase 0. El estado de cada una (⬜ pendiente · 🟨 en curso · ✅ completada) se marca en §10.
+**Rol en TrendAnalyzer:** ordena el plan por dependencias, **sin fechas** desde la v2.10, hacia dos entregas que se cumplen por contenido: **Sprint 2** (fases 0 a 5) y **Sprint Final** (fases 6 a 8). Las fases 1, 2 y 3 se trabajaron en paralelo una vez cerrada la Fase 0. El estado de cada una se marca en `PLAN.md` §3; las nueve están cerradas (✅).
 
 ### Responsables (M, C, A)
 
@@ -142,19 +216,25 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 **Qué es:** registro corto de una decisión de arquitectura, con la alternativa descartada.
 
-**Rol en TrendAnalyzer:** `ARCHITECTURE.md` §9 recoge 14 ADR (p. ej. ADR-01 fuentes simuladas, ADR-02 simulador en Cloud Run, ADR-05 NLP en español, ADR-11 generador integrado en el simulador, ADR-12 región `us-east1`, ADR-13 mapeo categoría → sentimiento, ADR-14 estado remoto de Terraform). ADR-02 y ADR-13, que se habían adoptado "por defecto", fueron aprobados el 17 oct.
+**Rol en TrendAnalyzer:** `ARCHITECTURE.md` §9 recoge **37 ADR**. Las más citadas: ADR-01 fuentes simuladas, ADR-02 simulador en Cloud Run, ADR-04 un solo envelope, ADR-05 NLP en español con RoBERTuito, ADR-06 anonimizar en el primer paso de cada plano, ADR-07 puente con Cloud Run Job y OIDC, ADR-08 partition projection, ADR-09 aristas en lugar de Neptune, ADR-12 región `us-central1`, ADR-13 mapeo categoría → sentimiento, ADR-14 estado remoto de Terraform, ADR-17 deduplicación en dos capas, ADR-20 tendencias en Dataflow, ADR-25 y ADR-26 Trusted y Curated con Glue Python (sin dbt), ADR-28 Great Expectations a demanda, ADR-29 catálogo en las DDL y linaje a mano, ADR-31 QuickSight con SPICE, ADR-32 alertas, ADR-33 ola de demo, ADR-34 CI/CD, ADR-35 costos, ADR-36 observabilidad y ADR-37 informe generado desde la evidencia. `INFORME.md` §4 resume las que más pesan.
+
+### Decisión del usuario y valores adoptados por defecto
+
+**Qué es:** dos formas de registrar quién decidió algo y con qué firmeza.
+
+**Rol en TrendAnalyzer:** una **decisión del usuario** la tomó el equipo de forma explícita y queda fechada en `CHANGELOG.md` (p. ej. el 26-oct-2026: Curated sin dbt y el horario de Glue encendido cada hora). Un valor **adoptado por defecto** es una propuesta que se aplicó sin objeción; vive en `ARCHITECTURE.md` §5.12 y, para cambiarlo, se cambia ahí primero y luego en el código.
 
 ### Versionado de documentos (`vX.Y`) y `schema_version`
 
-**Qué es:** dos números distintos. La versión del documento (p. ej. v2.8) cuenta los cambios de `ARCHITECTURE.md`. `schema_version` es la versión del **contrato del envelope** (hoy `"1.0"`).
+**Qué es:** dos números distintos. La versión del documento (hoy **v2.64**) cuenta los cambios de `ARCHITECTURE.md` y se registra en `CHANGELOG.md`. `schema_version` es la versión del **contrato del envelope** (hoy `"1.0"`).
 
-**Rol en TrendAnalyzer:** el documento sube de versión con cualquier cambio; `schema_version` solo cambia con un cambio **incompatible** del envelope (agregar un campo opcional no la cambia, pero sí exige actualizar el schema primero).
+**Rol en TrendAnalyzer:** el documento sube de versión con cualquier cambio. `schema_version` solo cambia con un cambio **incompatible** del envelope; aun así, como los schemas rechazan campos no declarados, un campo opcional nuevo exige actualizar primero el schema y a los consumidores. Otros contratos tienen su propia versión, como el mensaje `ta-alert` 1.0 o el watermark del exportador (`ta-export-watermark@1`), y algunas reglas llevan la versión en su nombre (`text-clean@1`, `trusted-to-curated@1.1`).
 
 ### Contratos en CI y pre-commit
 
 **Qué es:** controles automáticos antes de aceptar un cambio.
 
-**Rol en TrendAnalyzer:** la salida del generador y del simulador (≥ 1.000 eventos por fuente, con el caos apagado) se valida contra `contracts/*.schema.json`; `gitleaks` busca secretos antes del commit; `terraform.tfvars` está en `.gitignore` y se versiona `terraform.tfvars.example`.
+**Rol en TrendAnalyzer:** en cada PR y push a `main`, la CI valida la salida del simulador contra `contracts/*.schema.json` (≥ 1.000 eventos por fuente, caos apagado), corre las 18 pruebas de contratos y la de identidad (nada publicado lleva `handle` ni `user_id`) y escanea todo el historial con gitleaks. En local, el pre-commit corre gitleaks y `terraform fmt`. `terraform.tfvars` y `backend.hcl` están en `.gitignore`; se versionan sus `*.example`.
 
 ---
 
@@ -190,11 +270,11 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 **Rol en TrendAnalyzer:** el texto conserva cada hashtag tal como se escribió, y el campo `hashtags[]` los guarda en una **forma canónica**: minúsculas, sin `#`, sin tildes, solo `[a-z0-9_]`, sin repetidos y en orden de aparición (`#Postobón` ⇒ `"postobon"`). Así las claves de `edges_hashtag_cooccurrence` y los joins son estables, igual que las claves de marca.
 
-### `stream-simulator`
+### `ta-stream-simulator`
 
 **Qué es:** un servicio propio (Python, asyncio) empaquetado como contenedor y desplegado en Cloud Run.
 
-**Rol en TrendAnalyzer:** es el "falso internet". Corre siempre encendido (`min=max=1`) con **3 workers**, uno por fuente. Cada uno llama al generador, construye el envelope y lo publica a Pub/Sub cada 1 a 3 segundos (~0.5 mensajes/s por fuente, ~1.5 en total). El generador es inagotable, así que ya no hay "vueltas" de dataset. Vive en GCP, junto a Pub/Sub, para no cruzar credenciales entre nubes. Fabrica los campos que el generador no trae: usuarios, seguidores, engagement, hashtags, fechas, subreddit/página/cuenta, `kind` y `parent_id`.
+**Rol en TrendAnalyzer:** es el "falso internet". Con `min = max = 1` y CPU siempre asignada corre **3 workers**, uno por fuente: cada uno llama al generador, construye el envelope y lo publica a Pub/Sub cada 1 a 3 segundos (~0,5 mensajes/s por fuente, ~1,5 en total). Fabrica los campos que el generador no trae (usuarios, seguidores, engagement, hashtags, fechas, subreddit/página/cuenta, `kind` y `parent_id`). Vive en GCP, junto a Pub/Sub, para no cruzar credenciales entre nubes. Expone `GET /healthz` (sondas de Cloud Run), `GET /health` (el mismo estado, consultable desde fuera) y `/control/scenario`. Está **apagado por defecto** (`simulator_running = false`); lo encienden `on.py` o las validaciones, y el cursor sobrevive en GCS.
 
 ### Semilla (`SIM_SEED`) y reproducibilidad
 
@@ -204,15 +284,41 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 ### Cursor (`sim-state`) y `seq`
 
-**Qué es:** un cursor es un marcador de "voy por aquí"; `seq` es la posición del evento en la secuencia de su fuente.
+**Qué es:** un cursor es un marcador de "voy por aquí", como un marcapáginas. `seq` es el número de orden de cada evento dentro de su fuente (0, 1, 2…); cada fuente lleva su propia cuenta.
 
-**Rol en TrendAnalyzer:** el simulador guarda `{"seed", "seq", "updated_at"}` en `gs://…-ta-datasets/sim-state/{source}.json` cada 50 mensajes. Si el servicio se reinicia, continúa donde iba (puede repetir hasta 50 mensajes, lo cual es deduplicable). Si la semilla configurada no coincide con la del cursor, empieza de cero.
+**Rol en TrendAnalyzer:** el simulador guarda un JSON por fuente en `gs://{GCP_PROJECT}-ta-datasets/sim-state/`:
+
+```
+sim-state/reddit.json       {"seed": 7, "seq": 1207, "updated_at": "2026-10-29T14:03:12Z"}
+sim-state/facebook.json     (igual, con su propio seq)
+sim-state/instagram.json
+```
+
+- **Por qué hace falta.** Los comentarios son deterministas: misma semilla + fuente + `seq` ⇒ mismo comentario y mismo `event_id`. Si el simulador volviera a `seq = 0` en cada arranque, reenviaría todo lo que ya emitió, y todo serían duplicados. Con el cursor, tras un reinicio de Cloud Run o un `off.py` seguido de `on.py`, cada fuente sigue desde el último número guardado.
+- **Cada cuánto se guarda.** Cada 50 mensajes por fuente (≈ 100 s al ritmo normal). Por eso un reinicio puede repetir hasta 50 eventos: si el último guardado dice 1200 y el servicio se cayó en el 1230, al volver emite otra vez del 1200 al 1229, con los mismos `event_id`, y Dataflow los descarta (ver *Deduplicación*).
+- **Si cambia la semilla.** Si `SIM_SEED` no coincide con el `seed` del archivo, el cursor se ignora y la fuente empieza en `seq = 0`. No choca con lo anterior porque la semilla forma parte del `event_id`.
+- **Quién lo escribe y quién lo lee.** Solo lo escribe el simulador (`sa-simulator` tiene `storage.objectUser` en el bucket). Lo leen, sin modificarlo, `verify_ingest.py` (compara el `seq` del cursor con el último que llegó a Pub/Sub y, con `restart-check`, que la cuenta siga después de un reinicio) y `preflight.sh`, que lo imprime antes de cada validación.
+- **Historial.** El bucket tiene versionado: cada guardado deja una versión nueva y las anteriores se borran a los 7 días.
+- **Al apagar.** `simulator_running = false` borra el servicio de Cloud Run, pero no el cursor: al volver a encender, sigue donde iba.
+- **En local** (`docker-compose`), el cursor vive en el volumen Docker `sim-state`, montado en `/state` (`SIM_STATE_DIR`): `local_dev.sh down` lo conserva y `reset` lo borra.
+
+### Snapshots del generador (`snapshots/`)
+
+**Qué es:** un *snapshot* es una foto fija de unos datos en un momento dado. Aquí es un CSV con comentarios producidos por el generador.
+
+**Rol en TrendAnalyzer:** es **opcional**: ningún componente del pipeline lo lee ni lo necesita.
+
+- **Cómo se hace.** Desde `project/`, con `python scripts/generate_comments.py --n 50000 --seed 7 --out comentarios.csv`. El CSV trae `marca,comentario,sentimiento` (más `categoria` con `--categoria`): `marca` es la clave canónica (`postobon`) y `sentimiento` queda vacío en las categorías ambiguas. Si se quiere guardar, se sube a mano a `gs://{GCP_PROJECT}-ta-datasets/snapshots/comentarios-{seed}-{n}.csv`.
+- **Reproducible.** La fila `i` sale de `Random(f"{seed}|batch|{i}")`: misma semilla y mismos argumentos dan el mismo archivo, byte a byte.
+- **Para qué sirve.** Revisar el texto del generador sin encender nada (vocabulario, jerga, mezcla de sentimientos), mostrar una muestra en el informe o en la sustentación y poder regenerar exactamente esa misma muestra después.
+- **Ojo: no son los comentarios del stream.** El simulador siembra cada evento con `{seed}|{fuente}|{seq}` y elige la marca con pesos que cambian con `seq`; el CSV usa `{seed}|batch|{i}`. Es el mismo generador y el mismo estilo, pero no los mismos comentarios.
+- **Por qué no se versiona en git.** Pesa varios MB y se regenera en segundos con la misma semilla (50.000 filas en ~3,5 s), así que guardarlo en el repositorio no aporta nada.
 
 ### Escenarios de demo (`/control/scenario`)
 
-**Qué es:** un endpoint protegido que fuerza durante un tiempo una marca y un sentimiento (por ejemplo, una ola de comentarios negativos sobre `postobon`) y sube la frecuencia.
+**Qué es:** un endpoint protegido del simulador que, durante un tiempo, fuerza una marca y un sentimiento y sube la frecuencia de una red.
 
-**Rol en TrendAnalyzer:** permite mostrar alertas en la sustentación sin esperar una tendencia real. Los eventos quedan marcados en `sim.scenario`. Es opcional (Fase 6).
+**Rol en TrendAnalyzer:** permite mostrar una alerta real en la sustentación sin esperar una tendencia (Lote 6.3, HU-040, ADR-33). La ola **se suma** al tráfico normal: la red emite ×`m` y solo la fracción `1 − 1/m` de los eventos lleva la marca y el sentimiento forzados, así las demás marcas no caen ni dan alertas falsas de `volume_down`. Admite `POST`, `GET` y `DELETE`; `multiplier` de 2 a 10 y `duration_s` de 60 a 3.600; un escenario a la vez, que termina solo. Los eventos quedan marcados en `sim.scenario`. Lo protege el IAM de Cloud Run (sin token responde 403) y lo dispara el presentador con `scripts/demo_scenario.py`. Por defecto: `postobon`, `negative`, ×3, 300 s, `instagram`.
 
 ### Caos controlado (`SIM_CHAOS_ENABLED`)
 
@@ -242,7 +348,19 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 **Qué es:** una carga masiva única de registros pasados.
 
-**Rol en TrendAnalyzer:** el loader genera ~50.000 registros (configurable) con el **mismo generador** y otra semilla, con fechas en los últimos 180 días, para tener historia que comparar. Usa el mismo envelope (`origin = historical`).
+**Rol en TrendAnalyzer:** el Lote 3.1 generó **50.000 registros** de los últimos 180 días con el **mismo `EventFactory`** del simulador y otra semilla (`HIST_SEED = 3101`), repartidos por igual entre las tres fuentes. Los eventos se eligen según un **plan de tendencias** (estacionalidad semanal y horaria, crecimiento, Pepsi al alza, Postobón a la baja, una campaña de Sprite y una crisis de Postobón) para que haya historia que comparar. Usa el mismo envelope (`origin = historical`), el mismo pool de usuarios, la misma llave HMAC y el mismo NLP. Quedó en 12.102 archivos en `s3://…/raw/origin=historical/`; reejecutarlo no duplica nada.
+
+### `EventFactory`
+
+**Qué es:** la clase del simulador que fabrica un evento completo (envelope y mensajes de Pub/Sub) a partir de la fuente, el `seq` y la hora.
+
+**Rol en TrendAnalyzer:** garantiza que el stream, el histórico, la prueba de humo y las olas de prueba produzcan exactamente el mismo tipo de evento: todos la reutilizan con distintas semillas en lugar de tener cada uno su propio generador.
+
+### Centinelas y campo `generator`
+
+**Qué es:** un *centinela* es un evento de prueba con identidad conocida que se sigue por el sistema; `generator` es el campo del envelope que dice quién produjo el evento.
+
+**Rol en TrendAnalyzer:** los comentarios normales llevan `generator = comment-gen@1.0`. Los verificadores publican centinelas con `ta-verify@…` (p. ej. `ta-verify@2.1`, o la ola de prueba `ta-verify@6.2`), que el job de Trusted **descarta** para que no lleguen al análisis. La prueba de humo usa como centinela un comentario normal con la semilla reservada 990048, precedido de un calentamiento `ta-verify@2.1` (ADR-30).
 
 ---
 
@@ -250,18 +368,41 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 ### Cloud Storage (GCS)
 
-**Qué es:** almacenamiento de objetos (archivos) en la nube de Google: buckets que contienen carpetas y archivos de cualquier tipo, baratos y duraderos.
+**Qué es:** almacenamiento de objetos (archivos) en la nube de Google. Un *bucket* es un contenedor de archivos con un nombre único en todo GCP. Las "carpetas" de adentro son en realidad prefijos del nombre de cada archivo (`raw/source=reddit/…`). Es barato y duradero, y se paga por lo guardado y por las operaciones.
 
-**Rol en TrendAnalyzer:** se usa con dos buckets:
+**Rol en TrendAnalyzer:** hay dos buckets de datos, más el del estado de Terraform y uno que crea Cloud Build. Sus nombres empiezan con el ID del proyecto (`{GCP_PROJECT}-…`, p. ej. `project-0568d9ba-848f-413c-88b-ta-lake`) justamente porque tienen que ser únicos en todo GCP. Los dos de datos los crea Terraform (módulo `gcs_bucket`) con acceso uniforme y sin acceso público posible.
 
-- `{GCP_PROJECT}-ta-datasets`: **estado del simulador** (`sim-state/`) y snapshots opcionales del generador (`snapshots/`, no se versionan en git).
-- `{GCP_PROJECT}-ta-lake`: **salida de Dataflow**. Contiene `raw/` (el evento tal cual llegó, para auditoría y replay), `enriched/` (Parquet anonimizado y con NLP, que es lo único que sale hacia AWS), `dlq/` (mensajes inválidos) y `export-state/` (watermark del exportador).
+#### `{GCP_PROJECT}-ta-datasets`: estado del simulador
+
+| Carpeta | Qué guarda | Quién escribe y quién lee | Retención |
+|---|---|---|---|
+| `sim-state/` | Un JSON por fuente con el cursor del simulador (ver *Cursor* en §3). | Escribe el simulador; leen `verify_ingest.py` y `preflight.sh`. | La versión vigente no expira; las anteriores, 7 días. |
+| `snapshots/` | CSV opcionales del generador (ver *Snapshots* en §3). | Se suben a mano; nada los lee. | No expiran. |
+
+El nombre es histórico: hasta la v2.1 guardaba los datasets de emociones en inglés de los que el simulador sacaba el texto. Desde la v2.2 el texto sale del generador y el bucket solo conserva estas dos carpetas.
+
+#### `{GCP_PROJECT}-ta-lake`: salida de Dataflow
+
+| Carpeta | Qué guarda | Quién escribe y quién lee | Retención |
+|---|---|---|---|
+| `raw/` | Cada evento válido y único **tal como llegó**, con el *handle* simulado, en `jsonl.gz` por `source/dt/hr`. Sirve para auditar y reprocesar. | Escribe Dataflow. Acceso restringido: es lo único que **nunca sale de GCP**. | 30 días |
+| `enriched/` | Los mismos eventos ya anonimizados y con NLP, en Parquet con el esquema plano de `posts_enriched`. Es lo único que viaja a AWS. | Escribe Dataflow; lee el exportador, que no puede leer ninguna otra carpeta. | No expira |
+| `dlq/` | Mensajes rechazados, con el cuerpo original y el motivo, en `jsonl.gz` por `dt`. | Escribe Dataflow. | 30 días |
+| `export-state/` | `watermark.json`: hasta dónde copió el exportador (ver *Watermark* en §7). | Lo lee y escribe solo el exportador. | No expira |
+| `_dataflow/` | `temp/` y `staging/` (temporales y el paquete de código que se sube al lanzar el job) y `templates/` (la especificación de la plantilla Flex, `ta-stream.json`). | `dataflow_job.sh`, `dataflow_template.py` y el propio job. | — |
+
+Las particiones `dt`/`hr` de `raw/`, `enriched/` y `dlq/` son de la hora de **proceso** en UTC, y cada archivo se nombra por el inicio de su ventana. Ejemplo: `raw/source=reddit/dt=2026-10-29/hr=14/part-20261029T140500Z-p000.jsonl.gz`.
+
+#### Otros buckets
+
+- `{GCP_PROJECT}-ta-tfstate`: el estado remoto de Terraform del entorno `dev` de GCP (ver *Bootstrap de Terraform* en §8).
+- `{GCP_PROJECT}_cloudbuild`: lo crea Cloud Build por su cuenta. Ahí sube el código de cada build antes de construir la imagen, por eso el CD necesita permiso de escritura en él.
 
 ### Cloud Run
 
 **Qué es:** servicio de Google para ejecutar contenedores sin administrar servidores. Escala automáticamente y se paga por uso.
 
-**Rol en TrendAnalyzer:** aloja el `stream-simulator` como servicio always-on (CPU siempre asignada, una sola instancia para evitar emisiones duplicadas y que el cursor se pise). Expone `GET /healthz` y, opcionalmente, `POST /control/scenario`. Si el costo molesta, el plan B es una VM `e2-small` con el mismo contenedor (ADR-02).
+**Rol en TrendAnalyzer:** aloja dos servicios privados (solo los invoca quien tiene permiso de IAM). `ta-stream-simulator` corre con CPU siempre asignada y una sola instancia, para que no haya emisiones duplicadas ni se pise el cursor; el plan B por costo es una VM `e2-small` con el mismo contenedor (ADR-02). `ta-alert-notifier` recibe las alertas de `ta-alerts` y escala a cero. El *frontend* de Cloud Run reserva algunas rutas terminadas en `z`, por eso desde fuera se consulta `GET /health` y no `/healthz`.
 
 ### Cloud Run Job
 
@@ -273,22 +414,24 @@ El repositorio se organiza en dos carpetas con una regla simple: **en `docs/` se
 
 **Qué es:** un "cron" administrado: dispara tareas según un horario.
 
-**Rol en TrendAnalyzer:** cada 15 minutos lanza el exportador `gcs-to-s3`. Opcionalmente puede lanzar escenarios de demo.
+**Rol en TrendAnalyzer:** `ta-gcs-to-s3-cada-15-min` lanza el exportador cada 15 minutos (UTC). Se crea **en pausa** (estado de ahorro) y lo reanudan `on.py` o las validaciones. Los escenarios de demo no lo usan: los dispara el presentador.
 
 ### Pub/Sub
 
 **Qué es:** servicio de mensajería asíncrona. Un productor publica mensajes en un **topic** y uno o más consumidores los reciben mediante una **suscripción**. Desacopla a quien produce de quien consume y absorbe picos de tráfico.
 
-**Rol en TrendAnalyzer:** es el "tubo" entre simulación y procesamiento.
+**Rol en TrendAnalyzer:** es el "tubo" entre la simulación y el procesamiento, y también lleva las alertas.
 
 | Recurso | Para qué |
 |---|---|
 | `ta-raw-reddit`, `ta-raw-facebook`, `ta-raw-instagram` | Un topic por fuente; el simulador publica aquí. |
-| `ta-raw-{source}-df` | Suscripciones que consume Dataflow. |
-| `ta-dlq` | *Dead-letter queue*: mensajes que no pasan validación. |
-| `ta-alerts` | Alertas de tendencias (Fase 6). |
+| `ta-raw-{source}-df` | Suscripciones *pull* que consume Dataflow. |
+| `ta-dlq` y `ta-dlq-df` | *Dead-letter queue*: mensajes que no pasan validación, y la suscripción con la que el mismo job los lleva a `dlq_events`. |
+| `ta-alerts` y `ta-alerts-notifier` | Mensajes `ta-alert` que publica Dataflow, y la suscripción *push* hacia el notificador de Cloud Run. |
+| `ta-alerts-incidents` | Copia de cada notificación de la política de correo, para medir la alerta sin leer el buzón. |
+| `ta-verify-*` | Suscripciones temporales de los verificadores; ningún componente depende de ellas. |
 
-Retiene mensajes 7 días y entrega **al menos una vez**, por eso la deduplicación es obligatoria. Cada mensaje lleva los atributos `event_id`, `source`, `origin` y `schema_version`; `event_id` se usa como `id_label`.
+Retiene mensajes 7 días y entrega **al menos una vez**, por eso la deduplicación es obligatoria. Cada mensaje del stream lleva los atributos `event_id`, `source`, `origin` y `schema_version`; `event_id` se usa como `id_label`.
 
 ### Emulador de Pub/Sub y entorno local
 
@@ -300,44 +443,70 @@ Retiene mensajes 7 días y entrega **al menos una vez**, por eso la deduplicaci�
 
 **Qué es:** servicio administrado de Google para ejecutar pipelines de **Apache Beam**, tanto en modo streaming (datos continuos) como batch.
 
-**Rol en TrendAnalyzer:** es el **cerebro del plano caliente**. Lee de Pub/Sub y, en segundos, por cada evento:
+**Rol en TrendAnalyzer:** es el **cerebro del plano caliente**. El job `ta-stream-dev` (1 worker `e2-standard-2`, sin autoescalado, Streaming Engine, imagen `dataflow-nlp`) lee de Pub/Sub y, en segundos, por cada evento:
 
 1. Valida el envelope (los inválidos van a la DLQ).
-2. Deduplica por `event_id`.
-3. Anonimiza el autor con HMAC.
-4. Normaliza el engagement (`likes`, `shares`, `comments`).
-5. Aplica NLP (sentimiento y emoción).
-6. Escribe en BigQuery y en GCS.
-7. Calcula ventanas de tendencia.
+2. Deduplica por `event_id` y escribe `raw/`.
+3. Anonimiza el autor con HMAC y normaliza el engagement.
+4. Aplica NLP (sentimiento y emoción).
+5. Escribe en BigQuery (`posts_enriched`) y en `enriched/`.
+6. Calcula ventanas de tendencia (`trend_windows`).
+7. Publica las alertas en `ta-alerts`, con *cooldown*.
+
+Se lanza con `dataflow_job.sh` o desde la plantilla Flex (nunca los dos a la vez) y se **drena** fuera de las validaciones y demos (~0,25 USD/h encendido). Techo medido: 1,5 a 2,5 mensajes/s con el NLP en CPU.
+
+### Plantilla Flex de Dataflow
+
+**Qué es:** una forma de empaquetar un pipeline de Dataflow como una imagen de contenedor (el *lanzador*) más un archivo de especificación, para lanzarlo con parámetros sin tener el código fuente a mano.
+
+**Rol en TrendAnalyzer:** la imagen `dataflow-launcher` y la especificación `ta-stream-{etiqueta}.json` en `_dataflow/templates/` permiten lanzar el mismo job con los parámetros de `terraform output` (`dataflow_template.py run`). Se eligió Flex porque la plantilla clásica no admite bien parámetros en tiempo de ejecución para streaming en Python (ADR-20).
 
 ### BigQuery
 
 **Qué es:** almacén de datos analítico de Google. Permite consultar con SQL volúmenes enormes con muy baja latencia, sin administrar servidores.
 
-**Rol en TrendAnalyzer:** es la **analítica caliente** en GCP (dataset `ta_stream`). Contiene:
+**Rol en TrendAnalyzer:** es la **analítica caliente** en GCP (dataset `ta_stream`, creado por Terraform). Contiene:
 
-- `posts_enriched`: un registro por post, ya anonimizado y con sentimiento/emoción. Particionada por fecha (expira a 90 días), con clustering por `source` y `brand_primary`.
-- `trend_windows`: ventanas de 5 minutos por marca y fuente, con volumen, sentimiento promedio (con signo, de −1 a 1), z-scores y la bandera `is_alert`.
-- `dlq_events`: mensajes rechazados.
-- `dq_results`: resultados de calidad, una fila por verificación.
+- `posts_enriched`: un registro por post, ya anonimizado y con sentimiento y emoción, escrito con *streaming inserts* (~16 s desde Pub/Sub). Particionada por fecha (expira a 90 días) y agrupada por `source` y `brand_primary`.
+- `trend_windows`: una fila por panel de cada ventana de 5 minutos por marca y fuente, con volumen, sentimiento promedio (con signo, de −1 a 1), z-scores y la bandera `is_alert` (90 días). La vista **`trend_windows_latest`** deja la versión vigente de cada ventana.
+- `dlq_events`: mensajes rechazados, desde `ta-dlq-df` (30 días).
+- `dq_results`: resultados de Great Expectations, una fila por comprobación (sin expiración).
 
 ### Secret Manager
 
 **Qué es:** bóveda para guardar secretos (llaves, contraseñas, tokens) con control de acceso y versionado.
 
-**Rol en TrendAnalyzer:** guarda la **llave HMAC de anonimización** (`ta-hmac-key`), que Dataflow y el loader histórico leen para generar el `user_hash`. Ya no hay tokens de redes sociales.
+**Rol en TrendAnalyzer:** guarda la **llave HMAC de anonimización** (`ta-hmac-key`, 32 bytes en hex). Solo `sa-dataflow` puede leerla, desde el worker; el loader histórico la lee con las credenciales del desarrollador. El valor se carga fuera de Terraform (`hmac_key.sh`) para que no quede en el estado, y **no se rota**, porque cambiaría todos los `user_hash`. Ya no hay tokens de redes sociales.
 
 ### Cloud Monitoring + Logging
 
 **Qué es:** servicios de Google para métricas, dashboards, alertas y recolección de logs.
 
-**Rol en TrendAnalyzer:** observabilidad del plano GCP: latencia (KPI p95 < 5 min), tasa de mensajes del simulador y tamaño de la DLQ. Los logs de todo el código salen en JSON a stdout. También envía las **alertas por correo**: un suscriptor de `ta-alerts` escribe un log estructurado y una alerta basada en logs avisa por un canal de tipo email (sin SMTP ni secretos).
+**Rol en TrendAnalyzer:** cubren tres cosas, todas con aviso por correo:
+
+- **Alertas de tendencia:** el notificador escribe un log estructurado (`alert=trend`) y la política basada en logs `ta-alerta-tendencia` envía el correo (y una copia a `ta-alerts-incidents`).
+- **Operación** (Lote 7.2): el tablero «TrendAnalyzer · operación» (tasa de `ta-raw-*`, atraso, latencia p95 de lectura, marca de agua, DLQ, alertas y exportador) y cuatro alertas: `ta-op-dataflow-fallido`, `ta-op-latencia` (marca de agua > 5 min), `ta-op-dlq-creciente` (> 30 en 10 min) y `ta-op-exportador-fallido`.
+- **Gasto por olvido** (Lote 7.3): `ta-gasto-dataflow-encendido` (> 4 h) y `ta-gasto-simulador-encendido` (> 8 h).
+
+Todo el código escribe logs JSON a stdout. Por ahora el único destinatario es el correo de Alejandro (`alert_emails`, fuera del repositorio).
+
+### `ta-alert-notifier` y política basada en logs
+
+**Qué es:** una *política basada en logs* es una alerta de Cloud Monitoring que se dispara cuando aparece en Cloud Logging una línea que cumple un filtro.
+
+**Rol en TrendAnalyzer:** cierra la cadena de las alertas de tendencia (Lote 6.2, ADR-32) sin SMTP ni secretos: Dataflow publica en `ta-alerts`, la suscripción *push* llama al servicio `ta-alert-notifier` con el ID token de `sa-alerts`, el servicio escribe un log `WARNING` con los datos de la alerta y la política `ta-alerta-tendencia` manda el correo. Cada alerta abre su propio incidente, así que llega un correo por alerta. Medido: de 87 a 160 s entre el fin de la ventana y la notificación.
 
 ### Service accounts (cuentas de servicio)
 
 **Qué es:** identidades no humanas que usan los programas para autenticarse y tener permisos.
 
-**Rol en TrendAnalyzer:** aplican **mínimo privilegio**: `sa-simulator` solo publica en `ta-raw-*` y accede al bucket de datasets; `sa-dataflow` consume Pub/Sub, escribe en BigQuery/lake y lee la llave HMAC; `sa-exporter` solo lee `enriched/` y puede emitir un token OIDC.
+**Rol en TrendAnalyzer:** aplican **mínimo privilegio**:
+
+- `sa-simulator`: publica en `ta-raw-*` y usa el bucket de datasets.
+- `sa-dataflow`: consume Pub/Sub, publica en `ta-dlq` y `ta-alerts`, escribe en BigQuery y en el lake, lee la llave HMAC y descarga las imágenes de `ta-images`.
+- `sa-exporter`: lee solo `enriched/` (condición de IAM), escribe solo en `export-state/` y emite el token OIDC para AWS.
+- `sa-alerts`: identidad del notificador; es la única que puede invocarlo.
+- `sa-github-cd`: identidad del CD de GitHub (publicar imágenes y leer el estado para el `plan`).
 
 ---
 
@@ -345,15 +514,15 @@ Retiene mensajes 7 días y entrega **al menos una vez**, por eso la deduplicaci�
 
 ### `gcs-to-s3` (exportador)
 
-**Qué es:** un Cloud Run Job propio que copia archivos de un bucket de GCS a un bucket de S3.
+**Qué es:** un Cloud Run Job propio (`ta-gcs-to-s3`) que copia archivos de un bucket de GCS a un bucket de S3.
 
-**Rol en TrendAnalyzer:** es el **único camino de datos entre las dos nubes**. Cada 15 minutos lee `enriched/` en GCS (usando un *watermark* para saber qué ya copió) y sube los Parquet a `s3://…/raw/origin=stream/`. Es idempotente: si el objeto ya existe con el mismo tamaño, lo omite. Solo sale el dato ya anonimizado.
+**Rol en TrendAnalyzer:** es el **único camino de datos entre las dos nubes** (Lote 3.2, ADR-22). Cada 15 minutos lee los Parquet nuevos de `enriched/`, con un *watermark* por fecha de creación y una hora de solape, y los sube **byte a byte** a `s3://…/raw/origin=stream/` con SSE-KMS y el mismo checksum que en GCS. Es idempotente: si el objeto ya existe con el mismo tamaño, lo omite, y solo avanza el watermark después de subir todo. Solo sale el dato ya anonimizado. Su Scheduler se crea en pausa.
 
 ### OIDC / `AssumeRoleWithWebIdentity`
 
-**Qué es:** mecanismo de federación de identidad. En lugar de guardar llaves permanentes de AWS, el exportador presenta un token firmado por Google y AWS le entrega credenciales temporales.
+**Qué es:** mecanismo de federación de identidad. En lugar de guardar llaves permanentes, un programa presenta un token firmado por su proveedor de identidad y la otra nube le entrega credenciales temporales.
 
-**Rol en TrendAnalyzer:** permite que `sa-exporter` (GCP) asuma el rol `ta-gcp-exporter-role` (AWS) **sin llaves estáticas**. El plan B, si la federación no funciona a tiempo, es un usuario IAM con llaves en Secret Manager (menos seguro; se documentaría como deuda técnica).
+**Rol en TrendAnalyzer:** se usa dos veces, **sin llaves estáticas**. (1) El exportador: `sa-exporter` presenta su ID token de Google y asume el rol `ta-gcp-exporter-role` en AWS; Google es un proveedor integrado en AWS (`accounts.google.com`) y la confianza exige la audiencia y el identificador de esa cuenta de servicio. El plan B con llaves en Secret Manager no hizo falta. (2) El CD de GitHub: el token de GitHub Actions, solo de este repositorio y de `main`, se cambia por credenciales de `sa-github-cd` en GCP y del rol `ta-github-cd` en AWS.
 
 ---
 
@@ -363,40 +532,53 @@ Retiene mensajes 7 días y entrega **al menos una vez**, por eso la deduplicaci�
 
 **Qué es:** almacenamiento de objetos de AWS, equivalente a Cloud Storage. Es la base de casi cualquier data lake.
 
-**Rol en TrendAnalyzer:** es el **Lakehouse**. Un único bucket (`ta-{ENV}-{account_id}-lake`) organizado en capas:
+**Rol en TrendAnalyzer:** es el **Lakehouse**. Un único bucket (`ta-dev-{account_id}-lake`), privado, con SSE-KMS y acceso solo por TLS, organizado en capas:
 
 | Carpeta | Contenido |
 |---|---|
-| `raw/` | Datos tal como llegan (ya anonimizados), de origen `stream` e `historical`. |
-| `trusted/` | Datos unificados, deduplicados, con tipos correctos y reglas de calidad aplicadas. |
-| `curated/` | Modelo analítico listo para consumo (hechos, dimensiones, agregados, aristas). |
-| `quality/` | Reportes de Great Expectations (Lote 5.2) y, opcional, el informe del profiling (`quality/{fecha}/profiling/`, apagado por defecto; §3.20). |
+| `raw/` | Datos tal como llegan, ya anonimizados: `origin=stream` (copia de `enriched/`) y `origin=historical`. Solo los escriben sus productores. |
+| `trusted/` | `trusted/posts/`: stream e histórico unidos, deduplicados, con tipos correctos y `text_clean`; un Parquet por `source/dt`. |
+| `curated/` | Modelo analítico listo para consumo: hechos, dimensiones, agregados y aristas. |
+| `quality/` | Reportes de cada corrida de los jobs de Glue (`raw_to_trusted/`, `trusted_to_curated/`, con copia en `_latest/`) y de Great Expectations (`ge/{run_id}/`); opcional, el del profiling. |
 | `athena-results/` | Resultados de consultas de Athena (se borran a los 7 días). |
+| `_glue/` | Scripts de los jobs (los sube Terraform) y su carpeta temporal. |
 
 Todo se guarda en **Parquet + Snappy**.
 
 ### AWS Glue ETL
 
-**Qué es:** servicio de integración de datos administrado. Ejecuta jobs de transformación (ETL) con **Apache Spark** sin administrar un clúster.
+**Qué es:** servicio de integración de datos administrado. Ejecuta jobs de transformación (ETL) con Apache Spark o, para volúmenes pequeños, como scripts de Python (*Python shell*), sin administrar servidores.
 
-**Rol en TrendAnalyzer:** mueve los datos entre capas, orquestado por el workflow `ta-wf-raw-to-curated`:
+**Rol en TrendAnalyzer:** mueve los datos entre capas con dos jobs **Glue Python shell 3.9 con pyarrow** (sin Spark ni dbt), en el workflow `ta-wf-raw-to-curated`:
 
-- `ta-job-raw-to-trusted`: une stream e histórico, deduplica por `event_id`, corrige tipos y limpia texto.
-- `ta-job-trusted-to-curated`: construye el modelo analítico (hechos, dimensiones y agregados). *(v2.37: con Glue Python, sin dbt; `ARCHITECTURE.md` §3.22.)*
+- `ta-job-raw-to-trusted` (1 DPU, Lote 4.2): reconstruye Trusted entero desde los dos orígenes de Raw; descarta inválidos y centinelas, deduplica por `event_id` (se queda con la copia de menor `process_time`), corrige tipos y calcula `text_clean`.
+- `ta-job-trusted-to-curated` (0,0625 DPU, Lotes 4.3 y 4.4): recalcula las 9 tablas de Curated (hechos, dimensiones, agregados y aristas), concilia antes de escribir y sube solo lo que cambió.
 
-Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
+Son idempotentes: mismo input, mismos bytes. Una corrida del workflow cuesta ≈ 0,0196 USD (≈ 14,1 USD/mes con el horario cada hora).
+
+### DPU (*Data Processing Unit*)
+
+**Qué es:** la unidad con la que AWS Glue mide y cobra la capacidad de un job (1 DPU = 4 vCPU y 16 GB de memoria; un job Python shell puede usar 1 o 0,0625 DPU).
+
+**Rol en TrendAnalyzer:** Trusted corre con 1 DPU (pico medido de 582 MB) y Curated con 0,0625 DPU (pico de 457 MB). Se eligió Python shell porque un job Spark exige un mínimo de 2 DPU por corrida, más caro para ~221.000 filas (ADR-25, ADR-26).
+
+### Conciliación y reporte de corrida
+
+**Qué es:** *conciliar* es comprobar que los totales de una salida cuadran con su entrada antes de darla por buena; el *reporte de corrida* es el registro de lo que hizo cada ejecución.
+
+**Rol en TrendAnalyzer:** el job de Curated hace **16 comprobaciones** (p. ej. que `fact_posts` tenga las mismas filas que Trusted, que los agregados y las aristas sumen lo esperado y que las llaves foráneas existan) y, si una falla, **no escribe**. Los dos jobs dejan un reporte en `quality/{fecha}/…` y en `quality/_latest/` con lo leído, descartado, deduplicado y escrito, y el sha256 de cada archivo; la corrida siguiente lo usa para subir solo lo que cambió. Los reportes solo llevan conteos, sin datos de filas.
 
 ### Glue Data Catalog
 
 **Qué es:** catálogo central de metadatos: qué tablas existen, sus columnas, tipos y ubicación de los datos.
 
-**Rol en TrendAnalyzer:** es el **catálogo oficial** del proyecto (reemplaza a Dataplex). Define las bases `ta_raw`, `ta_trusted` y `ta_curated`, que Athena consulta. Es donde se documentan descripciones de tablas y columnas (entregable de gobernanza).
+**Rol en TrendAnalyzer:** es el **catálogo oficial** del proyecto (reemplaza a Dataplex). Define las bases `ta_raw`, `ta_trusted` y `ta_curated` con sus 11 tablas, que Terraform crea desde las DDL de `contracts/athena/` (sin crawlers) y Athena consulta. Cada tabla tiene su descripción y cada columna un comentario que empieza por su **clase de privacidad** (Lote 5.3, HU-034).
 
 ### Amazon Athena
 
 **Qué es:** servicio para consultar archivos en S3 con **SQL estándar**, sin servidores ni cargas previas. Se paga por datos escaneados.
 
-**Rol en TrendAnalyzer:** es la **capa de consulta** sobre el lakehouse. Usa un workgroup propio (`ta-analytics`) con límite de bytes escaneados. QuickSight se conecta a través de Athena.
+**Rol en TrendAnalyzer:** es la **capa de consulta** sobre el lakehouse. Usa el workgroup `ta-analytics` (motor v3, configuración forzada, resultados cifrados con SSE-KMS), que cancela toda consulta de más de **1 GiB** escaneado. Tiene consultas guardadas de ejemplo: dos sobre Raw y cinco sobre Curated (HU-030). QuickSight se conecta a través de Athena con el rol `ta-quicksight-role`.
 
 ### Partition projection
 
@@ -406,15 +588,15 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 ### Amazon EventBridge
 
-**Qué es:** bus de eventos y programador de AWS. Reacciona a eventos o dispara acciones según un horario.
+**Qué es:** bus de eventos y programador de AWS. Reacciona a eventos (reglas) o dispara acciones según un horario (*EventBridge Scheduler*).
 
-**Rol en TrendAnalyzer:** una regla `rate(1 hour)` dispara cada hora el workflow de Glue. Resuelve la "flecha huérfana" que tenía el diagrama anterior.
+**Rol en TrendAnalyzer:** dos usos. (1) El horario `ta-wf-raw-to-curated-cada-hora` de **EventBridge Scheduler** (`rate(1 hour)`) arranca el workflow de Glue con el rol `ta-lakehouse-scheduler-role`; se creó deshabilitado y está **encendido** desde el 26-oct-2026 por decisión del equipo (es el estado normal). (2) Reglas sobre los cambios de estado de los jobs de Glue: los fallos van a CloudWatch Logs y alimentan la alarma `ta-glue-job-fallido`. Resolvió la "flecha huérfana" del diagrama FINAL.
 
 ### Amazon QuickSight
 
 **Qué es:** herramienta de inteligencia de negocios (BI) de AWS para crear dashboards interactivos.
 
-**Rol en TrendAnalyzer:** es la **capa de visualización** para Marketing, Gerencia y Analistas. Sus datasets leen `ta_curated` vía Athena y usan **SPICE** para cumplir el KPI de respuesta < 3 segundos. Los dashboards se muestran en la zona horaria `America/Bogota`; el almacenamiento es siempre UTC.
+**Rol en TrendAnalyzer:** es la **capa de visualización** para Marketing, Gerencia y Analistas (Lote 6.1). Suscripción Enterprise en `us-east-1` (prueba gratis hasta ≈ 26-nov-2026; se da de baja después de la sustentación). El tablero `ta-tablero-tendencias` tiene las hojas «Tendencias» (HU-037) y «Relaciones» (HU-038) sobre 4 datasets SPICE con SQL propio sobre `ta_curated`, refrescados cada hora. Las horas se muestran en `America/Bogota` (convertidas en el SQL; el almacenamiento es UTC) y ningún dataset contiene `user_hash`. Se entra con los roles IAM `ta-quicksight-autor` y `ta-quicksight-lector` (grupos `ta-autores` y `ta-lectores`). Lo de adentro de QuickSight se despliega como código con `quicksight.py`.
 
 ### SPICE
 
@@ -426,19 +608,31 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Qué es:** servicio de métricas, logs y alarmas de AWS.
 
-**Rol en TrendAnalyzer:** observabilidad del plano AWS (jobs de Glue, ejecuciones, errores). Es el equivalente de Cloud Monitoring en GCP.
+**Rol en TrendAnalyzer:** observabilidad del plano AWS (Lote 7.2): logs de los jobs de Glue y de sus cambios de estado, el tablero `ta-lakehouse` (últimas corridas, fallos y bytes de Athena) y la alarma `ta-glue-job-fallido`, que avisa por el topic SNS `ta-observabilidad` (falta confirmar la suscripción del correo). Es el equivalente de Cloud Monitoring en GCP.
 
 ### IAM + KMS
 
 **Qué es:** **IAM** gestiona identidades y permisos. **KMS** gestiona llaves de cifrado.
 
-**Rol en TrendAnalyzer:** IAM define quién puede hacer qué (`ta-glue-role`, `ta-historical-loader`, `ta-quicksight-role`, `ta-gcp-exporter-role`, todos con mínimo privilegio). KMS cifra los objetos en S3 (SSE-KMS).
+**Rol en TrendAnalyzer:** IAM define quién puede hacer qué, con mínimo privilegio:
 
-### Loader histórico (`historical/loader`)
+| Rol | Puede |
+|---|---|
+| `ta-gcp-exporter-role` | Solo escribir en `raw/origin=stream/` (lo asume el exportador por OIDC). |
+| `ta-historical-loader` | Solo escribir en `raw/origin=historical/`. |
+| `ta-glue-role` | Leer todo el lake y escribir solo en `trusted/`, `curated/`, `quality/` y `_glue/temp/`; en Raw no. |
+| `ta-quicksight-role` | Consultar con Athena en `ta-analytics` y leer solo `curated/`. |
+| `ta-quicksight-autor` / `ta-quicksight-lector` | Entrar al tablero como autor o lector, sin acceso a los datos. |
+| `ta-lakehouse-scheduler-role` | Solo arrancar el workflow de Glue. |
+| `ta-github-cd` | Solo lectura (`ViewOnlyAccess`) para el `terraform plan` del CD. |
 
-**Qué es:** un script que genera un lote grande de registros de una sola vez (*full load*).
+Los roles productores no pueden leer ni borrar. KMS cifra los objetos de S3 con la llave `alias/ta-dev-lake` (SSE-KMS con *bucket key*).
 
-**Rol en TrendAnalyzer:** produce el **dataset histórico** con el mismo generador que el simulador. Usa el mismo envelope, anonimiza con HMAC, corre el NLP en lote y sube Parquet a `s3://…/raw/origin=historical/…/dt=…/hr=…/`. Entra directo a AWS, sin pasar por Pub/Sub.
+### Loader histórico (`src/historical/`)
+
+**Qué es:** un programa que genera y carga un lote grande de registros de una sola vez (*full load*).
+
+**Rol en TrendAnalyzer:** produce el **dataset histórico** (ver *Histórico* en §3) con `scripts/load_historical.py`: genera los eventos, anonimiza con HMAC, corre el NLP en lote con la imagen de NLP local y sube Parquet por `source/dt/hr` de `event_time` a `s3://…/raw/origin=historical/` asumiendo el rol `ta-historical-loader`. Sus etapas se pueden reanudar. Entra directo a AWS, sin pasar por Pub/Sub; su `process_time` es la hora de la carga.
 
 ---
 
@@ -448,31 +642,31 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Qué es:** framework de código abierto para definir pipelines de datos en un modelo unificado (batch y streaming). Dataflow es uno de sus *runners*.
 
-**Rol en TrendAnalyzer:** el pipeline de `src/streaming/` está escrito en Beam y se prueba localmente con `DirectRunner` antes de ejecutarlo en Dataflow.
+**Rol en TrendAnalyzer:** el pipeline de `src/streaming/` está escrito en Beam 2.77. Se prueba en local con el `DirectRunner` (en su variante `BundleBasedDirectRunner`) antes de ejecutarlo en Dataflow, y lo que funciona en local se vuelve a validar en la nube, porque el comportamiento no siempre es el mismo (p. ej. los *timers* que retenían la marca de agua solo fallaban en Dataflow).
 
 ### NLP preentrenado (`RunInference`) y RoBERTuito
 
 **Qué es:** *Natural Language Processing* es la rama de la IA que interpreta texto. Un modelo **preentrenado** ya fue entrenado por otros y solo se aplica. `RunInference` es el transform de Beam para ejecutar un modelo dentro del pipeline. **RoBERTuito** es un modelo de lenguaje para español de redes sociales; la librería `pysentimiento` ofrece versiones ya entrenadas para sentimiento y emoción.
 
-**Rol en TrendAnalyzer:** para cada texto calcula `sentiment_label` (`negative/neutral/positive`) y `emotion_label` (`joy, sadness, anger, fear, disgust, surprise, neutral`), con sus puntajes. Usa `robertuito-sentiment-analysis` y `robertuito-emotion-analysis` (ADR-05); el mapeo de las etiquetas del modelo a las del proyecto vive en `src/common/label_map.yaml`. Se registra la `nlp_model_version` (`robertuito-sentiment@<hash>+robertuito-emotion@<hash>`) en cada registro para trazabilidad. Su licencia es de uso académico y se cita en el informe. Es la pieza con más riesgo técnico (imagen pesada y memoria); el plan B es correr solo el modelo de sentimiento o mover el NLP a Cloud Run.
+**Rol en TrendAnalyzer:** para cada texto calcula `sentiment_label` (`negative/neutral/positive`) y `emotion_label` (`joy, sadness, anger, fear, disgust, surprise, neutral`), con sus puntajes. Usa `robertuito-sentiment-analysis` y `robertuito-emotion-analysis` (ADR-05), **horneados** con su commit en la imagen `dataflow-nlp`, sin depender de Hugging Face en ejecución; el mapeo de etiquetas vive en `src/common/label_map.yaml` y cada fila registra su `nlp_model_version`. Procesa lotes de hasta 16 textos; si un lote falla, sus filas siguen **sin NLP** en lugar de descartarse. Las filas del stream procesadas antes de activarlo (`NLP_SINCE` = 2026-10-22T23:00Z) quedaron sin NLP y se conservan con NLP nulo. Las *model cards* no declaran licencia y los modelos quedan sujetos a las de sus datos de entrenamiento (TASS 2020, EmoEvent), muchas no comerciales: es compatible con el uso académico (`INFORME.md` §8). Precisión medida: ver §9.
 
 ### Anonimización HMAC-SHA256
 
-**Qué es:** HMAC es una función de hash con llave secreta. Convierte un dato en un código irreversible y consistente: el mismo usuario siempre produce el mismo hash, pero no se puede revertir sin la llave.
+**Qué es:** HMAC es una función de hash con llave secreta: el mismo dato siempre produce el mismo código, pero sin la llave no se puede calcular ni revertir. Con la llave y la lista de identificadores originales sí se puede recalcular el vínculo, por eso técnicamente es una **seudonimización** (ver §9).
 
-**Rol en TrendAnalyzer:** convierte `author.user_id` y `author.handle` en `user_hash`. Se hace en el **primer paso de cada plano** (Dataflow o loader), de modo que ningún dato personal cruza a AWS (ADR-06). Cumple el KPI de 100 % de identificadores anonimizados y mantiene el análisis de relaciones (el mismo usuario sigue siendo identificable como hash).
+**Rol en TrendAnalyzer:** convierte `author.user_id` en `user_hash` (64 caracteres en hex) y descarta `author.handle`. Se hace en el **primer paso de cada plano** (Dataflow o loader), de modo que ningún identificador en claro cruza a AWS (ADR-06). Cumple el KPI de 100 % de identificadores anonimizados antes de la capa analítica y conserva el análisis de relaciones: el mismo usuario tiene siempre el mismo hash en el stream y en el histórico.
 
 ### Deduplicación
 
 **Qué es:** eliminar registros repetidos.
 
-**Rol en TrendAnalyzer:** se hace dos veces: en Dataflow (por `event_id`, usando el `id_label` de Pub/Sub) y de nuevo en Glue al construir Trusted. Necesaria porque Pub/Sub entrega *al menos una vez* y porque el caos del simulador inyecta duplicados. Desde v2.35 el job `ta-job-raw-to-trusted` (Lote 4.2) se queda con la copia de menor `process_time` (`ARCHITECTURE.md` §3.21 y §5.7).
+**Rol en TrendAnalyzer:** se hace en dos lugares. En **Dataflow**, en dos capas (ADR-17): el `id_label` de Pub/Sub descarta reentregas cercanas, y un estado por `event_id` en ventanas fijas de 1 h de tiempo de proceso cubre las copias más tardías (sin *timers*, que retenían la marca de agua). En **Trusted**, el job `ta-job-raw-to-trusted` deduplica sobre todo el lake y se queda con la copia de menor `process_time`. Es necesaria porque Pub/Sub entrega *al menos una vez*, el simulador puede repetir hasta 50 mensajes tras reiniciarse y el caos inyecta duplicados. Medido: 0,0012 % de duplicados en el Raw del stream y 0 % en Trusted.
 
 ### Dead-letter queue (DLQ)
 
 **Qué es:** destino alterno para mensajes que no se pudieron procesar.
 
-**Rol en TrendAnalyzer:** los mensajes malformados no se pierden ni rompen el pipeline: van al topic `ta-dlq`, a `gs://…/dlq/` y a la tabla `dlq_events`, con tipo y detalle del error.
+**Rol en TrendAnalyzer:** los mensajes malformados no se pierden ni rompen el pipeline: van al topic `ta-dlq` (con el cuerpo tal como llegó y los atributos `dlq_error_type`, `dlq_error_detail`, `dlq_source` y `dlq_received_at`), a `gs://…/dlq/` y, por `ta-dlq-df`, a la tabla `dlq_events`. Como el cuerpo se conserva, se pueden volver a publicar después de corregir el problema. Si llegan más de 30 en 10 minutos, salta la alerta `ta-op-dlq-creciente`.
 
 ### Normalización de engagement
 
@@ -480,29 +674,49 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Rol en TrendAnalyzer:** `likes` = `score` (Reddit) | `reactions_total` (Facebook) | `like_count` (Instagram); `shares` = `shares_count` (Facebook) y `null` en Reddit e Instagram; `comments` = `num_comments` (Reddit) | `comments_count` (Facebook, Instagram).
 
-### Ventanas deslizantes y `trend_windows`
+### Ventanas deslizantes, z-score y `trend_windows`
 
-**Qué es:** en streaming, una **ventana** agrupa eventos por tiempo. Una ventana *deslizante* se solapa: por ejemplo, 5 minutos de duración que avanza cada 1 minuto.
+**Qué es:** en streaming, una **ventana** agrupa eventos por tiempo; una ventana *deslizante* se solapa con la siguiente. El **z-score** mide a cuántas desviaciones estándar está un valor de su media.
 
-**Rol en TrendAnalyzer:** calcula por marca y fuente el volumen, la proporción positiva/negativa y el sentimiento promedio. Compara contra una línea base móvil mediante **z-scores**; cuando se desvía lo suficiente, marca `is_alert`. Sustenta el KPI de detección de tendencias en menos de 5 minutos.
+**Rol en TrendAnalyzer:** ventanas de 5 minutos que avanzan cada minuto, en **tiempo del evento**, por marca y fuente, con el volumen y el sentimiento promedio. Un DoFn con estado compara cada ventana con el **baseline** de las 60 anteriores (las vacías cuentan como 0) y calcula el z-score de volumen y de sentimiento. `is_alert` exige baseline completo, al menos 5 posts, un z-score de 3 o más en valor absoluto y una ventana completa (nunca las que cierra un drenado). Cada panel de una ventana es una fila de `trend_windows`, y `trend_windows_latest` deja la vigente. Sustenta el KPI de detección en menos de 5 minutos.
 
 ### Parámetros operativos de las alertas
 
 **Qué es:** reglas para evitar ruido en las alertas.
 
-**Rol en TrendAnalyzer:** *allowed lateness* de 30 min (un evento más tardío se escribe pero no recalcula ventanas); **arranque en frío**: sin baseline no hay alertas (`is_alert = false` hasta tener 60 ventanas, 1 h); *cooldown* de 15 min por marca × fuente × tipo de alerta.
+**Rol en TrendAnalyzer:**
+
+- **Tolerancia a tardíos** de 30 min: un evento más tardío se escribe pero no recalcula ventanas (contador `late_events`); los paneles tardíos son acumulativos, uno por minuto.
+- **Arranque en frío:** sin baseline no hay alertas. Como el baseline vive en el estado del job, **cada job nuevo pasa ~1 h sin alertas** (por eso la demo enciende todo 80 min antes).
+- **Tipos y *cooldown*:** cada métrica que pasa el umbral da un tipo (`volume_up`, `volume_down`, `sentiment_up` o `sentiment_down`) y se publica un mensaje `ta-alert` 1.0, con un *cooldown* de 15 min por marca × fuente × tipo en tiempo del evento.
 
 ### Watermark
 
-**Qué es:** en Dataflow, la noción de "hasta qué momento del tiempo creo que ya llegaron todos los datos". En el exportador, el término se usa para el marcador de lo último ya copiado.
+**Qué es:** la palabra se usa en dos sentidos. En Dataflow, la *marca de agua* es la estimación de "hasta qué momento del tiempo del evento ya llegaron todos los datos": cuando pasa el final de una ventana, esa ventana se puede cerrar. En el exportador es simplemente el marcador de lo último que ya se copió.
 
-**Rol en TrendAnalyzer:** permite manejar los eventos tardíos que genera el caos controlado. En `export-state/watermark.json` el exportador guarda su avance para no recopiar archivos.
+**Rol en TrendAnalyzer:**
+
+- **En Dataflow** decide cuándo se cierran las ventanas de tendencia y qué evento cuenta como tardío, así se manejan los tardíos que genera el caos controlado (ver *Parámetros operativos de las alertas*). Si se atrasa más de 5 minutos, salta la alerta `ta-op-latencia`.
+- **En el exportador** es el archivo `gs://{GCP_PROJECT}-ta-lake/export-state/watermark.json`:
+
+```
+{"schema": "ta-export-watermark@1", "cursor_time_created": "2026-10-29T14:15:02.311Z",
+ "updated_at": "…", "run_id": "…", "exporter": "gcs-to-s3@1.0", "last_run": {…}}
+```
+
+`cursor_time_created` es la fecha de creación en GCS del archivo de `enriched/` más nuevo que ya se copió. En cada corrida, el exportador revisa los archivos creados después de `cursor − 1 h` (la hora de solape cubre los que tardaron en aparecer), copia a S3 los que falten y, solo si todo salió bien, avanza el cursor, que nunca retrocede. Así cada corrida revisa solo lo nuevo y no todo `enriched/`.
 
 ### Parquet y esquema plano
 
 **Qué es:** Parquet es un formato de archivo **columnar** y comprimido, muy eficiente para analítica.
 
 **Rol en TrendAnalyzer:** es el formato de todo lo que vive en `enriched/` (GCS) y en S3. Los Parquet usan el **esquema plano** de BigQuery `posts_enriched` (`user_hash`, `followers`, `label_sentiment`, `brand_primary` aplanados y `payload` como JSON en texto), no el JSON anidado del envelope. Reduce costo y acelera Athena.
+
+### `text_clean` (regla `text-clean@1`)
+
+**Qué es:** la versión normalizada del texto de cada comentario, pensada para análisis de texto.
+
+**Rol en TrendAnalyzer:** la calcula el job de Trusted sin tocar `text`: normaliza Unicode, quita emojis y símbolos, URLs, menciones y hashtags (ya están en `hashtags`), pasa a minúsculas conservando tildes, ñ y puntuación, y colapsa los espacios. Garantías: nunca es nula si `text` no lo es, nunca es más larga que `text` (regla DQ-57) y aplicarla dos veces da lo mismo. La versión de la regla va en su nombre para poder cambiarla sin ambigüedad.
 
 ---
 
@@ -512,61 +726,98 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Qué es:** herramienta de **Infraestructura como Código (IaC)**: la infraestructura se describe en archivos y se crea o modifica con comandos.
 
-**Rol en TrendAnalyzer:** aprovisiona todo en `infra/gcp/` e `infra/aws/` (un módulo por recurso lógico). Cada módulo expone `outputs` (nombres de topics, buckets, ARNs) que el código consume por variables de entorno en lugar de hardcodearlos. El estado es **remoto** desde el primer día (GCS con versionado y S3 con bloqueo, ADR-14). En desarrollo, Terraform se autentica en AWS con el perfil local de AWS CLI (`aws configure`), sin claves en el código.
+**Rol en TrendAnalyzer:** aprovisiona todo en `infra/gcp/` e `infra/aws/`: 4 raíces (un *bootstrap* y un entorno `dev` por nube) y ~30 módulos, uno por pieza. Cada raíz expone `outputs` (topics, buckets, ARNs) que el código consume por variables de entorno en lugar de hardcodearlos. El estado es **remoto** desde el primer día (ADR-14). Se autentica sin llaves en el código: en AWS con el perfil de AWS CLI y en GCP con Application Default Credentials. Si un corte de red deja un `errored.tfstate`, los scripts lo suben al estado remoto (`terraform state push`) automáticamente.
 
 ### Bootstrap de Terraform
 
 **Qué es:** la preparación inicial que debe existir antes del resto de la infraestructura.
 
-**Rol en TrendAnalyzer:** el Lote 1.0 (HU-046) configura el proyecto GCP existente (región `us-east1`), habilita las APIs, crea los buckets de estado remoto, deja `terraform.tfvars.example` y un presupuesto mínimo. Como nada está aplicado todavía, es lo primero que se hace en la Fase 1.
+**Rol en TrendAnalyzer:** el Lote 1.0 (HU-046) configuró el proyecto GCP existente (región `us-central1`), habilitó 19 APIs, creó los presupuestos y el **estado remoto**, es decir, el lugar donde Terraform anota qué recursos creó y cómo están:
+
+- **GCP:** el bucket `{GCP_PROJECT}-ta-tfstate` (prefijo `env/dev`), con versionado; conserva las 10 versiones anteriores más recientes.
+- **AWS:** el bucket `ta-dev-{AWS_ACCOUNT_ID}-tfstate` (clave `env/dev/terraform.tfstate`), con 90 días de versiones, y la tabla DynamoDB `ta-dev-tflock`, el *candado* que impide que dos `apply` escriban el estado a la vez.
+
+Cada *bootstrap* vive en un directorio aparte con estado local, `prevent_destroy` en los recursos de estado y, en AWS, `allowed_account_ids` (ADR-15, ADR-16). Está aplicado desde la v2.12.
 
 ### Entornos y regiones
 
 **Qué es:** dónde vive cada cosa.
 
-**Rol en TrendAnalyzer:** GCP en `us-east1` (cercana a AWS y a Colombia, ADR-12) y AWS en `us-east-1`. Hoy solo existe el entorno `dev`.
+**Rol en TrendAnalyzer:** GCP en `us-central1`, elegida por las cuotas de vCPU y Dataflow verificadas en la cuenta de crédito (ADR-12; la primera opción fue `us-east1`), y AWS en `us-east-1`. Solo existe el entorno `dev`. Los dos planos procesan en Estados Unidos, lo que tiene implicaciones de transferencia internacional bajo la Ley 1581 (§9).
 
 ### GitHub y GitHub Actions
 
-**Qué es:** GitHub aloja el repositorio. GitHub Actions ejecuta flujos automáticos (CI/CD) cuando hay un push o pull request.
+**Qué es:** GitHub aloja el repositorio. GitHub Actions ejecuta flujos automáticos (CI/CD) cuando hay un push o un pull request.
 
-**Rol en TrendAnalyzer:** versiona el código y los contratos; ejecuta tests, `terraform fmt/validate/plan`, y construye y publica las imágenes Docker. Los workflows viven en `.github/workflows/` (raíz) y usan `working-directory: project`. Un test en CI verifica que no existan columnas `handle`/`user_id` en los datos publicados.
+**Rol en TrendAnalyzer:** versiona el código y los contratos (Lote 7.1, ADR-34). La **CI** (`ci.yml`) corre en cada PR y push a `main` **sin credenciales de nube**: pruebas, contratos, identidad, `terraform fmt/validate`, la etapa de prueba de las imágenes y gitleaks sobre todo el historial (6 trabajos, ~3,7 min). El **CD** (`cd.yml`) usa OIDC, solo corre en `main` cuando cambian la infraestructura o los servicios, publica las imágenes con Cloud Build y corre `terraform plan` en las dos nubes; está activo desde la v2.63. El `apply` sigue siendo manual.
 
-### Docker y Artifact Registry
+### Docker, Artifact Registry y Cloud Build
 
-**Qué es:** Docker empaqueta una aplicación con todas sus dependencias en una *imagen*. Artifact Registry es donde Google guarda esas imágenes.
+**Qué es:** Docker empaqueta una aplicación con todo lo que necesita (Python, librerías, modelos) en una *imagen*, un paquete que corre igual en cualquier máquina; un *contenedor* es una imagen en ejecución. **Artifact Registry** es el almacén de imágenes de Google y **Cloud Build** las construye en la nube, sin necesidad de tener Docker en el computador.
 
-**Rol en TrendAnalyzer:** el simulador, el exportador y el contenedor de Dataflow (con el modelo NLP) se construyen como imágenes y se despliegan desde Artifact Registry.
+**Rol en TrendAnalyzer:** el repositorio **`ta-images`** (Artifact Registry, `us-central1`) guarda las cinco imágenes del proyecto. La dirección completa de cada una es `us-central1-docker.pkg.dev/{GCP_PROJECT}/ta-images/{imagen}:{etiqueta}`.
+
+| Imagen | Qué lleva | Quién la usa | Se construye con | Etiquetas |
+|---|---|---|---|---|
+| `stream-simulator` | El simulador y el generador | Cloud Run `ta-stream-simulator` | `build_simulator_image.sh` | Commit corto |
+| `alert-notifier` | El notificador de alertas | Cloud Run `ta-alert-notifier` | `build_alerts_image.sh` | Huella del código (`h-…`) y `:latest` |
+| `gcs-to-s3` | El exportador | Cloud Run Job `ta-gcs-to-s3` | `build_exporter_image.sh` | `{commit}-{huella}` y `:latest` |
+| `dataflow-nlp` | Beam y los dos modelos RoBERTuito ya descargados | Los workers de Dataflow | `build_nlp_image.sh` | Commit corto y `:latest` |
+| `dataflow-launcher` | El código del pipeline para la plantilla Flex | `dataflow_template.py run` | `dataflow_template.py build` | Commit (o fecha) y `:latest` |
+
+- **Cómo se construye.** El script sube el código a Cloud Build (al bucket `{GCP_PROJECT}_cloudbuild`), que corre las pruebas dentro de la imagen (en las de Dataflow, una prueba de humo) y solo la publica en `ta-images` si pasan. Con el modo `docker` usa el Docker local. Así nunca se publica una imagen con pruebas rotas.
+- **Etiquetas.** El commit o la huella dicen exactamente de qué versión del código salió cada imagen (la huella cambia si cambia el código aunque no haya commit); `:latest` apunta a la más reciente. Cloud Run despliega la etiqueta concreta que dice `terraform.tfvars` (`simulator_image`, `exporter_image`, `alerts_notifier_image`), así que un build nuevo no cambia lo desplegado hasta el siguiente `apply`. Dataflow, en cambio, usa `dataflow-nlp:latest` salvo que `TA_NLP_IMAGE` diga otra.
+- **Limpieza automática.** El repositorio conserva las 10 versiones más recientes de cada imagen y borra las que no tienen etiqueta después de 7 días, para no pagar el almacenamiento de imágenes viejas.
+- **Permisos.** `sa-dataflow` solo puede descargar (`artifactregistry.reader`); `sa-github-cd` puede publicar (`artifactregistry.writer`).
+- **CD.** En cada push a `main` que toque los servicios, `cd.yml` reconstruye y publica `stream-simulator`, `gcs-to-s3` y `alert-notifier` con estos mismos scripts. Las dos de Dataflow se construyen a mano.
 
 ### Great Expectations
 
 **Qué es:** librería para definir y ejecutar pruebas de calidad sobre los datos ("este campo no puede ser nulo", "este id debe ser único").
 
-**Rol en TrendAnalyzer:** valida Trusted y BigQuery contra los KPIs: completitud ≥ 95 %, unicidad ≥ 99 %, duplicados < 1 % y anonimización total. Escribe los resultados en `dq_results` y en `s3://…/quality/`.
+**Rol en TrendAnalyzer:** la versión **1.24.1** mide la calidad de Raw, Trusted y Curated (Lote 5.2, ADR-28): lleva a GX las 63 reglas del profiling (DQ-01…DQ-63) más 14 de Curated (DQ-64…DQ-77), en total **239 comprobaciones** por corrida. Corre **a demanda** desde WSL (`run_dq.py`, con su venv `~/.venvs/ta-gx`) sobre una copia local del lake y escribe los resultados en `ta_stream.dq_results` y en `s3://…/quality/{día}/ge/{run_id}/`, sin datos de filas. También mide la precisión del NLP (HU-033).
 
-### dbt
+### dbt (descartado)
 
 **Qué es:** herramienta para transformar datos con SQL de manera versionada, con tests y documentación automática.
 
-**Rol en TrendAnalyzer:** construye el modelo Curated (`dbt-athena`) y sus pruebas. Sus *docs* generan el **linaje** de datos, que es el reemplazo de OpenLineage. *(v2.37: el usuario decidió construir Curated con Glue Python, sin dbt (`ARCHITECTURE.md` §3.22, ADR-26); el linaje sin dbt docs queda a decidir, ADR-10.)*
+**Rol en TrendAnalyzer:** el plan original lo usaba para Curated (`dbt-athena`), sus pruebas y el linaje (*dbt docs*). **Se descartó** por decisión del equipo (26-oct-2026): Curated se construye con Glue Python (ADR-26), la calidad se prueba con Great Expectations (ADR-28) y el linaje es un documento hecho a mano (ADR-29). Las menciones que quedan en el README son anteriores a esa decisión.
 
 ### Prueba de humo end-to-end (`smoke_e2e.py`)
 
 **Qué es:** una prueba rápida que sigue un solo evento de punta a punta.
 
-**Rol en TrendAnalyzer:** emite un evento **centinela** (con `event_id` conocido) y lo sigue desde el simulador hasta `ta_curated.fact_posts`, reportando la latencia por etapa. Es evidencia para el informe (HU-048).
+**Rol en TrendAnalyzer:** `scripts/smoke_e2e.py` (Lote 5.4, HU-048, ADR-30) publica su propio centinela (un comentario normal con `event_id` conocido) y lo sigue por BigQuery, `enriched/`, S3, Trusted y Curated, disparando el exportador y el workflow de Glue sin esperar sus horarios. Mide la latencia de cada etapa contra su objetivo y comprueba que no aparezcan `user_id` ni `handle` en ninguna. Última corrida: **430 s** de Pub/Sub a `fact_posts` (15,9 s hasta BigQuery). Es la fuente de dos KPI del informe.
 
 ### Prefijo `ta-` y etiquetas
 
 **Qué es:** convención de nombres.
 
-**Rol en TrendAnalyzer:** todo recurso lleva el prefijo `ta-` y las etiquetas `project=trend-analyzer`, `env=dev`, `owner=alejandro`, lo que facilita rastrear costos y responsables.
+**Rol en TrendAnalyzer:** todo recurso lleva el prefijo `ta-` y las etiquetas `project=trend-analyzer`, `env=dev`, `owner=alejandro` y `component=<pieza>` (p. ej. `ingest`, `lakehouse`, `serving`), lo que permite agrupar costos y responsables. En AWS, `project` ya está activada como etiqueta de asignación de costos; `component` está pendiente de activar en Billing.
 
-### `terraform.tfvars` y secretos
+### `terraform.tfvars`, `backend.hcl` y secretos
 
-**Qué es:** el archivo de valores de Terraform, que puede contener datos sensibles.
+**Qué es:** los archivos de valores y de backend de Terraform, que pueden contener datos sensibles.
 
-**Rol en TrendAnalyzer:** está en `.gitignore`; se versiona `terraform.tfvars.example`. Nunca hay secretos en el repositorio (`gitleaks` lo vigila) y los IDs de cuenta y proyecto van en configuración, no en el código.
+**Rol en TrendAnalyzer:** están en `.gitignore`; se versionan sus `*.example`. Nunca hay secretos en el repositorio: gitleaks lo vigila en el pre-commit y en la CI. Los IDs de cuenta, los correos de alerta y los proyectos van en configuración, no en el código. Excepción conocida: un token de Mastodon antiguo quedó en el historial público y está pendiente de revocar.
+
+### `on.py`, `off.py`, `status.py` y estado de ahorro
+
+**Qué es:** los scripts de operación que encienden, apagan y muestran lo que cobra; el *estado de ahorro* es el estado por defecto, con todo lo costoso apagado.
+
+**Rol en TrendAnalyzer:** `on.py` enciende el simulador, Dataflow con NLP, el exportador y el horario del lakehouse (con `--stream-only`, solo los dos primeros); `off.py` drena Dataflow, apaga el simulador y pausa el exportador; `status.py` dice en solo lectura qué está encendido y si el flujo de punta a punta está completo o cortado. Por defecto el simulador está apagado y el Scheduler del exportador en pausa; el horario de Glue cada hora es la excepción aceptada. El *preflight* de cada validación parte de ahí.
+
+### Control de costos
+
+**Qué es:** el conjunto de medidas para no gastar más de lo previsto.
+
+**Rol en TrendAnalyzer:** presupuestos de 400000 COP en GCP y 50 USD en AWS, que solo avisan por correo (al 50, 80/90 y 100 % y por pronóstico); **alertas de gasto por olvido** (Dataflow > 4 h, simulador > 8 h; ADR-35); el estado de ahorro con los scripts de operación; Dataflow de un solo worker; retenciones y ciclos de vida; y la etiqueta `component`. Referencias: Dataflow ~0,25 USD/h y el workflow de Glue ≈ 14,1 USD/mes con el horario.
+
+### gitleaks y pre-commit
+
+**Qué es:** gitleaks busca secretos (llaves, tokens) en el código y en el historial de git; *pre-commit* corre controles automáticos antes de cada commit.
+
+**Rol en TrendAnalyzer:** `.pre-commit-config.yaml` corre gitleaks (v8.28.0) y `terraform fmt` en local, y la CI escanea todo el historial en cada PR. `.gitleaksignore` deja pasar dos hallazgos revisados a mano: una llave falsa de una prueba y el token de Mastodon del historial, que sigue pendiente de revocar.
 
 ---
 
@@ -576,39 +827,63 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Qué es:** análisis exploratorio de un conjunto de datos para conocer su estructura, nulos, distribuciones y anomalías.
 
-**Rol en TrendAnalyzer:** se aplica sobre Raw y Trusted para entender el estado real de los datos antes de definir reglas de calidad (HU-031). Incluye reportar la **diversidad léxica**, dado que el generador usa plantillas. Desde v2.33 lo hace `scripts/profile_data.py` (Lote 5.1); qué mide, cómo se usa y lo que encontró en Raw están en `ARCHITECTURE.md` §3.20, y las reglas que propone, en §5.10.
+**Rol en TrendAnalyzer:** `scripts/profile_data.py` (Lote 5.1, HU-031, ADR-24) perfila Raw y Trusted desde una copia local de solo lectura de S3, para conocer el estado real de los datos antes de fijar las reglas de calidad. En Raw (221.637 filas) encontró las filas sin NLP, 6 centinelas, 2 `event_id` repetidos, muchos archivos pequeños y un vocabulario acotado; en Trusted, 54 de 54 reglas cumplidas. De ahí salió el catálogo DQ-01…DQ-63. La evidencia solo lleva agregados (`evidencia/profiling_*_5_1.{json,md}`).
 
-**Términos del informe:** *TTR* (tipos / tokens), *MATTR* (TTR medio en ventanas deslizantes de 500 tokens; no depende del tamaño del texto), *hapax* (palabras que aparecen una sola vez), *distinct-2* (bigramas distintos / bigramas) y *esqueleto* (el texto en minúsculas, sin tildes, hashtags ni signos y con la marca enmascarada, para medir cuánto se repiten las plantillas). Definiciones exactas en `ARCHITECTURE.md` §3.20.
+**Términos del informe:** *TTR* (tipos / tokens), *MATTR* (TTR medio en ventanas deslizantes de 500 tokens; no depende del tamaño del texto; 0,479 en Raw), *hapax* (palabras que aparecen una sola vez), *distinct-2* (bigramas distintos / bigramas) y *esqueleto* (el texto en minúsculas, sin tildes, hashtags ni signos y con la marca enmascarada, para medir cuánto se repiten las plantillas). Definiciones exactas en `ARCHITECTURE.md` §3.20.
 
 ### Calidad de datos y KPIs
 
 **Qué es:** medición de si los datos son completos, únicos, consistentes y oportunos.
 
-**Rol en TrendAnalyzer:** cada KPI del proyecto tiene una regla medible (completitud, unicidad, duplicados, anonimización, latencia, dashboard < 3 s). Además se mide la **precisión del NLP** comparando `sentiment_label` contra `label_sentiment` (extra; se excluyen los eventos con `null`).
+**Rol en TrendAnalyzer:** cada KPI tiene una regla medible y una evidencia. En Trusted, la capa confiable: completitud 100 % (objetivo ≥ 95 %), unicidad 100 % (≥ 99 %), duplicados 0 % (< 1 %) y 100 % de identificadores anonimizados. Además: ingesta a BigQuery en 15,9 s (< 60 s), detección de tendencias en 87–160 s (< 5 min) y respuesta del tablero de 2,83 s en el peor clic (< 3 s). La tabla completa, con su evidencia y el comando para volver a medir cada cifra, está en `INFORME.md` §6. El KPI de reducción del 50 % del tiempo de elaboración de informes de marketing no se midió.
+
+### Catálogo de reglas DQ y `dq_results`
+
+**Qué es:** la lista numerada de reglas de calidad del proyecto, cada una con su umbral, su gravedad y el KPI al que aporta.
+
+**Rol en TrendAnalyzer:** el profiling del Lote 5.1 propuso **DQ-01…DQ-63** sobre Raw y Trusted (`ARCHITECTURE.md` §5.10), cada una con su expectativa de Great Expectations sugerida y su predicado SQL; el 5.2 sumó **DQ-64…DQ-77** para Curated. Ejemplos: no nulos obligatorios, unicidad de `event_id`, `user_hash` con forma de HMAC, hashtags canónicos, `text_clean` nunca más largo que `text` y precisión del NLP ≥ 0,88 (DQ-62). Cada corrida escribe una fila por comprobación en `ta_stream.dq_results` (`layer` ∈ `stream`, `raw`, `trusted`, `curated`).
+
+### Precisión del NLP (accuracy y F1 macro)
+
+**Qué es:** *accuracy* es la proporción de predicciones correctas; *F1 macro* es el promedio, entre clases, de la media armónica entre precisión y exhaustividad, y no se deja inflar por la clase más frecuente.
+
+**Rol en TrendAnalyzer:** compara el `sentiment_label` del modelo con la verdad del simulador (`label_sentiment`), sin las filas sin etiqueta: accuracy **0,9197** y F1 macro **0,9167** sobre 109.365 filas (HU-033). Es un KPI **informativo** y optimista, porque las plantillas expresan el sentimiento con claridad y la verdad no es una anotación humana.
 
 ### Catálogo y linaje
 
 **Qué es:** el *catálogo* describe qué datos existen y qué significan. El *linaje* muestra de dónde vienen y cómo se transforman.
 
-**Rol en TrendAnalyzer:** el catálogo vive en el Glue Data Catalog; el linaje se documenta con dbt docs y un diagrama.
+**Rol en TrendAnalyzer:** el **catálogo** vive en el Glue Data Catalog: la descripción de cada tabla y el comentario de cada columna salen de las DDL de `contracts/athena/`, Terraform los lleva a Glue y el diccionario generado es `docs/CATALOG.md` (Lote 5.3, HU-034). El **linaje** está en `docs/LINEAGE.md`: un documento y un diagrama Mermaid hechos a mano, de extremo a extremo y por columna, comprobado contra el catálogo (HU-035). No hay *dbt docs* ni OpenLineage (ADR-29).
+
+### Clases de privacidad
+
+**Qué es:** una etiqueta que dice qué tan sensible es una columna desde el punto de vista de los datos personales.
+
+**Rol en TrendAnalyzer:** cada comentario de columna del catálogo empieza con una de cuatro clases: `[anonimizado]` (solo las 5 columnas `user_hash`), `[cuasi_identificador]` (8: `followers` y `payload` en Raw y Trusted, y los resúmenes de actividad de `dim_user`, que cruzados con otras fuentes ayudarían a reidentificar), `[texto_libre]` (3) y `[sin_dato_personal]` (92). Una prueba exige que `[anonimizado]` esté exactamente en `user_hash`. Curated no lleva texto libre, y sus únicos cuasi-identificadores son los resúmenes por seudónimo de `dim_user`.
+
+### Seudonimización
+
+**Qué es:** reemplazar un identificador por un código que, por sí solo, no revela a la persona, pero que con información guardada aparte (como una llave) permite volver a vincularlo. A diferencia de la anonimización, en principio es reversible.
+
+**Rol en TrendAnalyzer:** es lo que hace el HMAC de `user_hash`, y así lo nombra la nota de la Ley 1581 en `GOVERNANCE.md`. Por eso la llave está restringida a `sa-dataflow` y no se rota (rotarla rompería la unión entre stream e histórico).
 
 ### DAMA-DMBOK
 
 **Qué es:** guía de referencia internacional de buenas prácticas en gestión de datos.
 
-**Rol en TrendAnalyzer:** el marco con el que se estructura y documenta la gobernanza del proyecto.
+**Rol en TrendAnalyzer:** `GOVERNANCE.md` recorre sus 11 áreas de conocimiento (gobierno, arquitectura, modelado, almacenamiento y operaciones, seguridad, integración, documentos y contenido, datos maestros y de referencia, *data warehousing* y BI, metadatos y calidad), con la evidencia de cada una (rutas que el validador comprueba) y sus brechas. También define los roles: dueño (el equipo), administrador de calidad y gobernanza (Alejandro), custodios técnicos y consumidores.
 
 ### Ley 1581 (Colombia)
 
 **Qué es:** ley colombiana de protección de datos personales (Habeas Data).
 
-**Rol en TrendAnalyzer:** aunque los datos son sintéticos, se documenta el tratamiento como si fueran reales (anonimización, acceso restringido). Es el motivo por el que `raw/` en GCS tiene acceso restringido.
+**Rol en TrendAnalyzer:** aunque los datos son sintéticos, se documenta el tratamiento como si fueran reales (nota en `GOVERNANCE.md`): seudonimización con HMAC en el primer paso; acceso restringido al `raw/` de GCS (el único lugar con el *handle* simulado, 30 días); minimización (solo `enriched/` sale de GCP y Curated no lleva texto ni identificadores); retención limitada; transferencia internacional (los datos se procesan en Estados Unidos; por confirmar contra la norma vigente si fueran reales); y qué haría falta para los derechos del titular. Los controles que cita la nota se verificaron en la nube en solo lectura (G1 a G7).
 
 ### Retención
 
 **Qué es:** cuánto tiempo se conserva cada dato.
 
-**Rol en TrendAnalyzer:** GCS `raw/` y `dlq/` 30 días; BigQuery `posts_enriched` 90 días (el histórico completo vive en S3); S3 `athena-results/` 7 días; Pub/Sub 7 días.
+**Rol en TrendAnalyzer:** Pub/Sub 7 días; GCS `raw/` y `dlq/` 30 días; BigQuery `posts_enriched` y `trend_windows` 90 días (el histórico completo vive en S3), `dlq_events` 30 días y `dq_results` sin expiración; S3 `athena-results/` 7 días; logs de Glue 30 días. Del estado de Terraform se conservan las 10 últimas versiones anteriores en GCS y 90 días de versiones en S3.
 
 ---
 
@@ -618,7 +893,7 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Qué es:** usar más de un proveedor de nube en una misma solución.
 
-**Rol en TrendAnalyzer:** GCP ofrece Pub/Sub y Dataflow para streaming; AWS ofrece Glue, Athena y QuickSight para el lakehouse. El único punto de integración es `gcs-to-s3`.
+**Rol en TrendAnalyzer:** GCP ofrece Pub/Sub, Dataflow y BigQuery para el streaming; AWS ofrece S3, Glue, Athena y QuickSight para el lakehouse. El **único camino de datos** entre las dos es `gcs-to-s3`, que solo lleva datos anonimizados y se autentica por OIDC; las dos nubes comparten el contrato del envelope. El costo de la decisión: dos modelos de identidad, dos raíces de Terraform y el puente que operar.
 
 ### Streaming vs. batch
 
@@ -630,7 +905,7 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Qué es:** procesamiento con latencia de segundos a pocos minutos, sin ser instantáneo.
 
-**Rol en TrendAnalyzer:** es el objetivo del plano GCP; el KPI exige detectar tendencias en menos de 5 minutos (p95).
+**Rol en TrendAnalyzer:** es el objetivo del plano GCP: el KPI exige detectar tendencias en menos de 5 minutos para el 95 % de los eventos válidos. Se midió con dos alertas reales: 159,8 s y 106,9 s del fin de la ventana a la notificación (87 s en el ensayo). El plano AWS no es *near-real-time*: con los horarios normales el dato llega a Curated en ≤ 1 h 30 min y al tablero en ≤ 2 h 30 min.
 
 ### Lakehouse
 
@@ -644,27 +919,39 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 **Rol en TrendAnalyzer:**
 
-- **Raw:** tal cual llega (ya anonimizado).
-- **Trusted:** limpio, deduplicado y validado; une stream e histórico y añade `text_clean` (el texto en minúsculas, sin emojis, URLs, menciones ni hashtags: regla `text-clean@1` de `ARCHITECTURE.md` §5.7). Lo escribe el job `ta-job-raw-to-trusted` desde v2.35 (§3.21).
-- **Curated:** modelado para análisis.
+- **Raw:** tal cual llega, ya anonimizado. En S3, el del stream es copia byte a byte de `enriched/`: el `raw/` de GCS, que tiene el *handle*, nunca sale de GCP.
+- **Trusted:** limpio, deduplicado y validado; une stream e histórico, descarta centinelas, particiona por `dt = DATE(event_time)` y añade `text_clean`. Lo escribe `ta-job-raw-to-trusted`.
+- **Curated:** modelado para análisis (estrella, agregados y aristas), sin texto libre ni identificadores. Lo escribe `ta-job-trusted-to-curated`.
 
 ### Modelo estrella (`fact_posts`, `dim_*`)
 
 **Qué es:** diseño analítico con una tabla central de hechos rodeada de tablas de dimensiones.
 
-**Rol en TrendAnalyzer:** `fact_posts` guarda un registro por post con sus métricas; `dim_date`, `dim_source`, `dim_brand` y `dim_user` describen el contexto (`dim_user` solo con `user_hash`). Se complementa con agregados (`agg_emotion_by_brand_hour`, `agg_trend_daily`).
+**Rol en TrendAnalyzer:** `fact_posts` (grano `event_id`, particionada por `dt`) guarda un registro por post con sus métricas; `dim_date`, `dim_source`, `dim_brand` y `dim_user` describen el contexto (`dim_user` solo con `user_hash`, primera y última aparición, número de posts y máximo de seguidores). Las llaves foráneas son **naturales** (`source`, `brand_primary`, `user_hash` y `date_key` como `yyyymmdd`), sin llaves sustitutas, y todas las tablas se regeneran enteras en cada corrida, así que no guardan historia de cambios. Se complementa con agregados por `brand_primary` (`agg_emotion_by_brand_hour`, `agg_trend_daily`).
 
 ### Tablas de aristas (`edges_*`)
 
 **Qué es:** representación de relaciones como pares origen-destino con un peso (la base de un grafo).
 
-**Rol en TrendAnalyzer:** `edges_user_brand` y `edges_hashtag_cooccurrence` cubren el "análisis de relaciones y propagación" sin necesidad de una base de grafos.
+**Rol en TrendAnalyzer:** cubren el "análisis de relaciones" sin base de grafos (ADR-09, ADR-27). `edges_user_brand`: una fila por usuario y marca, con `weight` = filas del usuario que mencionan la marca (una comparativa cuenta para sus dos marcas); hoy 15.395 pares. `edges_hashtag_cooccurrence`: una fila por par de hashtags, con `weight` = filas donde aparecen juntos y siempre `hashtag_a < hashtag_b`; hoy 136 pares de 25 hashtags. Las escribe el mismo job de Curated y alimentan la hoja «Relaciones» del tablero.
 
 ### Idempotencia
 
 **Qué es:** propiedad de una operación que, aplicada varias veces, da el mismo resultado que aplicada una.
 
-**Rol en TrendAnalyzer:** el `event_id` determinista, el exportador que omite objetos ya copiados y Glue que sobrescribe particiones permiten reintentos seguros sin duplicar datos.
+**Rol en TrendAnalyzer:** permite reintentar cualquier etapa sin duplicar: el `event_id` es determinista; Dataflow escribe archivos con nombres deterministas por ventana; el exportador omite objetos ya copiados y avanza su watermark solo al terminar; reejecutar el histórico no sube nada; Trusted reemplaza un archivo por partición (mismo Raw, mismos bytes) y Curated sube solo los archivos cuyo sha256 cambió.
+
+### Tiempo del evento y tiempo de proceso
+
+**Qué es:** el *tiempo del evento* es cuándo ocurrió algo (`event_time`); el *tiempo de proceso* es cuándo el sistema lo procesó (`process_time`).
+
+**Rol en TrendAnalyzer:** las ventanas de tendencia y el *cooldown* usan el tiempo del evento, para que un evento tardío caiga en su ventana correcta. Las particiones cambian según la capa: en GCS y en el Raw del stream, `dt`/`hr` son la hora de proceso; en el histórico, Trusted y Curated, `dt` es la fecha del evento en UTC (`ARCHITECTURE.md` §9 #9). En el histórico, `process_time` es la hora de la carga, así que la latencia solo tiene sentido en el stream.
+
+### Entrega «al menos una vez» (*at-least-once*)
+
+**Qué es:** garantía de mensajería en la que ningún mensaje se pierde, pero alguno puede llegar más de una vez.
+
+**Rol en TrendAnalyzer:** es la garantía de Pub/Sub y del simulador (que tras un reinicio repite hasta 50 mensajes). Se compensa con identidad determinista y deduplicación por `event_id`, en lugar de intentar una entrega exactamente una vez.
 
 ### Contrato
 
@@ -685,14 +972,19 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 | Componente | Qué es | Por qué quedó fuera |
 |---|---|---|
 | **Mastodon / RSS** | Red social descentralizada y formato de titulares | Se reemplazaron por Facebook e Instagram simulados (v2.2). |
-| **Datasets de emociones** (TEC, GoEmotions, SemEval-2007, DailyDialog, ISEAR) | Colecciones públicas de textos etiquetados con emoción | Eran en inglés, no hablaban de las marcas y obligaban a inyectarlas; los reemplaza el generador (v2.2). |
+| **Datasets de emociones** (TEC, GoEmotions, SemEval-2007, DailyDialog, ISEAR) | Colecciones públicas de textos etiquetados con emoción | Estaban en inglés, no hablaban de las marcas y obligaban a inyectarlas; los reemplazó el generador (v2.2). |
 | **Modelo en inglés** (`emotion-english-distilroberta-base`) | Modelo de emoción para inglés | Sustituido por RoBERTuito en español (ADR-05). |
-| **CocaCola y Colombiana** | Marcas que trae el script del generador | Fuera de v1; se pueden añadir después en `brands.yaml`. |
+| **CocaCola y Colombiana** | Marcas que trae el script original del generador | Fuera de v1; se pueden añadir en `brands.yaml`. |
 | **Firestore** | Base de datos documental de GCP | El estado del simulador vive en un objeto de GCS. |
-| **Cloud SQL** | Base relacional administrada (PostgreSQL) | No hay datos transaccionales en v1. |
-| **Amazon Neptune** | Base de datos de grafos de AWS | Se cubre con tablas de aristas consultables en Athena; queda como extensión. |
-| **Dataplex / OpenLineage** | Gobernanza y linaje de GCP / estándar abierto de linaje | Se usa Glue Data Catalog y dbt docs. |
-| **`src/collectors/`** | Conectores REST reales de Mastodon, Reddit y RSS | Quedan como código legado/opcional; no se despliegan. |
+| **Cloud SQL** | Base relacional administrada | No hay datos transaccionales en v1. |
+| **Amazon Neptune** | Base de datos de grafos de AWS | Se cubre con tablas de aristas consultables en Athena; queda como extensión (ADR-09). |
+| **Dataplex / OpenLineage** | Gobernanza de GCP / estándar abierto de linaje | Catálogo en Glue Data Catalog y linaje hecho a mano en `LINEAGE.md` (ADR-29). |
+| **dbt** (`dbt-athena`, *dbt docs*) | Transformación SQL con pruebas y documentación | Descartado por el equipo: Curated con Glue Python, calidad con Great Expectations y linaje a mano (ADR-26, ADR-28, ADR-29). |
+| **Spark en Glue** (`glueetl`) | Jobs de Glue sobre Spark | Mínimo 2 DPU por corrida, más caro para ~221.000 filas; se usa Python shell con pyarrow (ADR-25). |
+| **Glue Crawlers** | Descubren particiones y esquemas | Se usa partition projection, con tablas creadas por Terraform desde las DDL (ADR-08, ADR-23). |
+| **Storage Transfer Service / llaves de IAM** | Alternativas para copiar de GCS a S3 | El puente es un Cloud Run Job con OIDC, sin llaves de larga vida (ADR-07, ADR-22). |
+| **Conector QuickSight → BigQuery** | Leer BigQuery desde QuickSight | Sin verificar; el camino principal es Athena → QuickSight (`ARCHITECTURE.md` §9 #6). |
+| **`src/collectors/`** | Conectores REST reales de Mastodon, Reddit y RSS | Código del enfoque anterior; ya no está en el repositorio. |
 
 ---
 
@@ -700,36 +992,42 @@ Es idempotente: **sobrescribe las particiones `dt`** en lugar de añadir.
 
 | Componente | Nube / ámbito | Rol en una frase |
 |---|---|---|
-| `ARCHITECTURE.md` | Repositorio | Fuente de verdad: contratos, plan, decisiones y estado. |
-| `GLOSSARY.md` | Repositorio | Vocabulario común del proyecto. |
+| `ARCHITECTURE.md` | Repositorio | Fuente de verdad: contratos, decisiones y una sección por lote. |
+| `PLAN.md` | Repositorio | Fases, lotes, trazabilidad hacia las HU y la única tabla de estado. |
+| `CHANGELOG.md` | Repositorio | Historial de versiones y decisiones fechadas. |
 | `HU.md` | Repositorio | Historias de usuario y criterios de aceptación (qué es "terminado"). |
+| `INFORME.md` · `SUSTENTACION.md` · `RUNBOOK.md` | Repositorio | Informe con los KPI medidos, guion de la sustentación y manual de operación. |
+| `GOVERNANCE.md` · `CATALOG.md` · `LINEAGE.md` | Repositorio | Gobierno de datos, diccionario de datos y linaje. |
+| `GLOSSARY.md` | Repositorio | Vocabulario común del proyecto. |
 | `contracts/` | Repositorio | Contratos ejecutables: schemas, DDL, ejemplos y pruebas. |
-| Lote / Fase | Plan | Unidad de entrega / agrupación hacia los hitos Sprint 2 y Final. |
+| `docs/validation/` + `validate_*.py` + `evidencia/` | Repositorio | Validación reproducible de cada lote y su evidencia. |
+| Lote / Fase | Plan | Unidad de entrega / agrupación hacia Sprint 2 y Sprint Final. |
 | ADR | Plan | Decisión de arquitectura con su alternativa descartada. |
 | Generador de comentarios | GCP (en el simulador) | Produce el texto y la marca de cada comentario en español. |
-| `stream-simulator` | GCP (Cloud Run) | Reproduce Reddit, Facebook e Instagram como si estuvieran en vivo. |
-| Cloud Storage | GCP | Guarda el estado del simulador y el lake de GCP (raw, enriched, dlq). |
-| Cloud Run / Run Job | GCP | Ejecuta el simulador (siempre activo) y el exportador (por lotes). |
-| Cloud Scheduler | GCP | Dispara el exportador cada 15 minutos. |
-| Pub/Sub | GCP | Mensajería que desacopla el simulador de Dataflow. |
-| Dataflow | GCP | Valida, deduplica, anonimiza, aplica NLP y calcula tendencias en tiempo casi real. |
-| BigQuery | GCP | Analítica caliente: posts enriquecidos y ventanas de tendencia. |
+| `ta-stream-simulator` | GCP (Cloud Run) | Reproduce Reddit, Facebook e Instagram como si estuvieran en vivo y fuerza olas de demo. |
+| Cloud Storage | GCP | Estado del simulador y lake de GCP (`raw/`, `enriched/`, `dlq/`). |
+| Cloud Run / Run Job | GCP | Simulador y notificador de alertas (servicios) y exportador (job). |
+| Cloud Scheduler | GCP | Dispara el exportador cada 15 minutos (en pausa por defecto). |
+| Pub/Sub | GCP | Mensajería del stream, de la DLQ y de las alertas. |
+| Dataflow | GCP | Valida, deduplica, anonimiza, aplica NLP, calcula tendencias y publica alertas. |
+| BigQuery | GCP | Analítica caliente: posts enriquecidos, ventanas, DLQ y resultados de calidad. |
 | Secret Manager | GCP | Custodia la llave HMAC de anonimización. |
-| Monitoring + Logging | GCP | Observabilidad del plano caliente y alertas por correo. |
-| `gcs-to-s3` + OIDC | GCP → AWS | Único puente entre nubes; copia solo datos anonimizados. |
-| Loader histórico | AWS | Carga masiva única del histórico, generado con el mismo generador. |
-| Amazon S3 | AWS | Lakehouse por capas Raw → Trusted → Curated. |
-| AWS Glue ETL | AWS | Transforma entre capas con Spark. |
-| Glue Data Catalog | AWS | Catálogo oficial de tablas y metadatos. |
-| Athena (+ partition projection) | AWS | Consultas SQL sobre S3 sin crawlers. |
-| EventBridge | AWS | Dispara el workflow de Glue cada hora. |
-| QuickSight (+ SPICE) | AWS | Dashboards para Marketing, Gerencia y Analistas. |
-| CloudWatch | AWS | Observabilidad del plano AWS. |
-| IAM + KMS | AWS | Permisos mínimos y cifrado. |
-| Terraform | DataOps | Crea toda la infraestructura como código, con estado remoto. |
-| GitHub + Actions | DataOps | Versionado y CI/CD. |
-| Docker + Artifact Registry | DataOps | Empaqueta y distribuye los contenedores. |
-| Great Expectations | DataOps | Pruebas de calidad contra los KPIs. |
-| dbt | DataOps | Modelo Curated, tests y linaje. |
-| Modelos RoBERTuito (pysentimiento) | GCP (Dataflow) | Clasifican sentimiento y emoción de cada texto en español. |
-| HMAC-SHA256 | GCP / AWS | Anonimiza usuarios antes de que el dato salga de GCP. |
+| Monitoring + Logging | GCP | Tablero de operación y alertas de tendencia, operación y gasto por correo. |
+| `gcs-to-s3` + OIDC | GCP → AWS | Único puente de datos entre nubes; copia solo datos anonimizados. |
+| Loader histórico | → AWS | Carga única de 180 días, generada con el mismo `EventFactory`. |
+| Amazon S3 | AWS | Lakehouse por capas Raw → Trusted → Curated, más los reportes de calidad. |
+| AWS Glue (Python shell) | AWS | Construye Trusted y Curated con pyarrow, cada hora. |
+| Glue Data Catalog | AWS | Catálogo oficial, con descripciones y clases de privacidad. |
+| Athena (+ partition projection) | AWS | Consultas SQL sobre S3 sin crawlers, con límite de 1 GiB. |
+| EventBridge (Scheduler y reglas) | AWS | Arranca el workflow cada hora y registra los estados de Glue. |
+| QuickSight (+ SPICE) | AWS | Tablero de tendencias y relaciones para Marketing, Gerencia y Analistas. |
+| CloudWatch + SNS | AWS | Observabilidad del lakehouse y alarma de fallos de Glue. |
+| IAM + KMS | AWS | Permisos mínimos por rol y cifrado SSE-KMS. |
+| Terraform | DataOps | Toda la infraestructura como código, con estado remoto. |
+| GitHub Actions | DataOps | CI sin credenciales y CD con OIDC. |
+| Docker + Artifact Registry + Cloud Build | DataOps | Construyen, prueban y distribuyen las imágenes. |
+| `on.py` / `off.py` / `status.py` | DataOps | Encienden, apagan y muestran lo que cobra. |
+| Great Expectations | Calidad | 239 comprobaciones sobre Raw, Trusted y Curated, a demanda. |
+| `smoke_e2e.py` | Calidad | Sigue un centinela de Pub/Sub a Curated y mide cada etapa. |
+| Modelos RoBERTuito (pysentimiento) | GCP (Dataflow) | Clasifican el sentimiento y la emoción de cada texto en español. |
+| HMAC-SHA256 | GCP / loader | Seudonimiza a los usuarios antes de que el dato salga de GCP. |
